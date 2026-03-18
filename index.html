@@ -1406,6 +1406,170 @@ body::before {
   .upload-area { padding: 20px 16px; }
 }
 
+/* ===== COUNTDOWN ===== */
+.countdown {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin: 20px 0 8px;
+}
+.countdown-unit {
+  text-align: center;
+}
+.countdown-unit .cd-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--gold);
+  line-height: 1;
+}
+.countdown-unit .cd-label {
+  font-size: 0.7rem;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+.countdown-past {
+  text-align: center;
+  font-family: 'Playfair Display', serif;
+  font-size: 1.2rem;
+  color: var(--gold);
+  margin: 16px 0;
+}
+@media (max-width: 640px) {
+  .countdown { gap: 12px; }
+  .countdown-unit .cd-num { font-size: 1.6rem; }
+}
+
+/* ===== WEATHER WIDGET ===== */
+.weather-widget {
+  background: linear-gradient(135deg, var(--ocean), var(--teal));
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  margin-top: 16px;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.weather-widget .ww-icon { font-size: 2.5rem; }
+.weather-widget .ww-info { flex: 1; }
+.weather-widget .ww-temp {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+.weather-widget .ww-desc {
+  font-size: 0.82rem;
+  opacity: 0.9;
+}
+.weather-widget .ww-details {
+  display: flex;
+  gap: 14px;
+  font-size: 0.75rem;
+  opacity: 0.85;
+  margin-top: 4px;
+}
+.weather-widget .ww-link {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.8);
+  text-decoration: underline;
+}
+@media (max-width: 640px) {
+  .weather-widget { flex-wrap: wrap; padding: 14px 16px; gap: 10px; }
+  .weather-widget .ww-temp { font-size: 1.3rem; }
+}
+
+/* ===== TRAVEL INFO PAGE ===== */
+.travel-section {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: 28px 24px;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 16px;
+}
+.travel-section h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  color: var(--mahogany);
+  margin-bottom: 4px;
+}
+.travel-section .travel-sub {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin-bottom: 20px;
+}
+.travel-add-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 16px;
+  transition: transform 0.15s;
+}
+.travel-add-btn:active { transform: scale(0.97); }
+.travel-cards { display: flex; flex-direction: column; gap: 12px; }
+.travel-card {
+  background: var(--sand-light);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  border-left: 4px solid var(--teal);
+}
+.travel-card .tc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.travel-card .tc-name {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--mahogany);
+}
+.travel-card .tc-actions { display: flex; gap: 4px; }
+.travel-card .tc-actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+}
+.travel-card .tc-actions button:hover { background: var(--sand); }
+.travel-card .tc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.travel-card .tc-item {
+  font-size: 0.82rem;
+  color: var(--text-medium);
+}
+.travel-card .tc-item strong {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 1px;
+}
+.travel-card.type-reservation {
+  border-left-color: var(--sunset);
+}
+@media (max-width: 640px) {
+  .travel-section { padding: 20px 14px; border-radius: var(--radius-lg); }
+  .travel-card .tc-grid { grid-template-columns: 1fr; }
+}
+
 /* ===== UTILITY ===== */
 .hidden { display: none !important; }
 </style>
@@ -1439,6 +1603,8 @@ body::before {
       <button class="nav-btn" data-page="itinerary">Itinerary</button>
       <button class="nav-btn" data-page="map">Map</button>
       <button class="nav-btn" data-page="split">Split</button>
+      <button class="nav-btn" data-page="travel">Travel</button>
+      <button class="nav-btn" data-page="reservations">Resos</button>
     </nav>
     <div class="header-user">
       <div class="user-avatar" id="userAvatar"></div>
@@ -1456,7 +1622,9 @@ body::before {
       <p class="subtitle">To those who have gotten married in the past six years, welcome to your Homiemoon</p>
       <p class="tagline-home">We're totally only going to chill, relax and enjoy the beaches. Totally not drinkin. Chill Vibes only</p>
       <div class="dates">🌴 Aug 30 – Sep 5, 2026 · Oahu, HI</div>
+      <div id="countdownContainer"></div>
       <div class="stats-grid" id="homeStats"></div>
+      <div id="weatherWidget"></div>
     </div>
   </div>
 
@@ -1574,6 +1742,26 @@ body::before {
     </div>
   </div>
 
+  <!-- TRAVEL INFO PAGE -->
+  <div id="page-travel" class="hidden">
+    <div class="travel-section">
+      <h2>✈️ Flight & Hotel Info</h2>
+      <p class="travel-sub">Add your arrival/departure so the crew can coordinate pickups and plans</p>
+      <button class="travel-add-btn" onclick="openTravelModal()">+ Add My Travel Info</button>
+      <div class="travel-cards" id="travelCards"></div>
+    </div>
+  </div>
+
+  <!-- RESERVATIONS PAGE -->
+  <div id="page-reservations" class="hidden">
+    <div class="travel-section">
+      <h2>🍽️ Reservations</h2>
+      <p class="travel-sub">Keep track of restaurant bookings, tours, and rentals</p>
+      <button class="travel-add-btn" onclick="openResoModal()">+ Add Reservation</button>
+      <div class="travel-cards" id="resoCards"></div>
+    </div>
+  </div>
+
 </div>
 
 <!-- FAB -->
@@ -1646,6 +1834,84 @@ body::before {
   </div>
 </div>
 
+<!-- TRAVEL MODAL -->
+<div class="modal-overlay" id="travelModalOverlay" onclick="closeTravelModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 id="travelModalTitle">Add Travel Info</h3>
+    <div class="form-group">
+      <label>Your Name *</label>
+      <input type="text" id="travelName" placeholder="Your name">
+    </div>
+    <div class="form-group">
+      <label>Arrival Date & Time</label>
+      <input type="text" id="travelArrival" placeholder="e.g. Aug 30, 2:30 PM">
+    </div>
+    <div class="form-group">
+      <label>Arrival Flight #</label>
+      <input type="text" id="travelFlightIn" placeholder="e.g. HA 101">
+    </div>
+    <div class="form-group">
+      <label>Departure Date & Time</label>
+      <input type="text" id="travelDeparture" placeholder="e.g. Sep 5, 6:00 PM">
+    </div>
+    <div class="form-group">
+      <label>Departure Flight #</label>
+      <input type="text" id="travelFlightOut" placeholder="e.g. HA 202">
+    </div>
+    <div class="form-group">
+      <label>Hotel / Accommodation</label>
+      <input type="text" id="travelHotel" placeholder="e.g. Aulani Resort, then Turtle Bay">
+    </div>
+    <div class="form-group">
+      <label>Confirmation # (optional)</label>
+      <input type="text" id="travelConfirmation" placeholder="Booking confirmation number">
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <input type="text" id="travelNotes" placeholder="e.g. Need airport pickup, arriving late">
+    </div>
+    <div class="btn-row" style="display:flex;gap:10px;margin-top:18px;">
+      <button class="btn-cancel" onclick="closeTravelModal()" style="flex:1;padding:14px;border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.95rem;font-weight:600;cursor:pointer;border:none;background:var(--sand);color:var(--text-medium);">Cancel</button>
+      <button class="btn-submit" id="travelSubmitBtn" onclick="saveTravel()" style="flex:1;padding:14px;border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.95rem;font-weight:600;cursor:pointer;border:none;background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:white;">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESERVATION MODAL -->
+<div class="modal-overlay" id="resoModalOverlay" onclick="closeResoModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 id="resoModalTitle">Add Reservation</h3>
+    <div class="form-group">
+      <label>Restaurant / Venue *</label>
+      <input type="text" id="resoVenue" placeholder="e.g. Duke's Waikiki">
+    </div>
+    <div class="form-group">
+      <label>Date & Time *</label>
+      <input type="text" id="resoDateTime" placeholder="e.g. Sep 1, 7:00 PM">
+    </div>
+    <div class="form-group">
+      <label>Party Size</label>
+      <input type="number" id="resoParty" placeholder="e.g. 8" min="1">
+    </div>
+    <div class="form-group">
+      <label>Booked By</label>
+      <input type="text" id="resoBookedBy" placeholder="Who made the reservation?">
+    </div>
+    <div class="form-group">
+      <label>Confirmation #</label>
+      <input type="text" id="resoConfirmation" placeholder="Reservation confirmation number">
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <input type="text" id="resoNotes" placeholder="e.g. Outdoor seating requested, ask for Jason">
+    </div>
+    <div class="btn-row" style="display:flex;gap:10px;margin-top:18px;">
+      <button class="btn-cancel" onclick="closeResoModal()" style="flex:1;padding:14px;border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.95rem;font-weight:600;cursor:pointer;border:none;background:var(--sand);color:var(--text-medium);">Cancel</button>
+      <button class="btn-submit" id="resoSubmitBtn" onclick="saveReso()" style="flex:1;padding:14px;border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.95rem;font-weight:600;cursor:pointer;border:none;background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:white;">Save</button>
+    </div>
+  </div>
+</div>
+
 <div class="footer" id="appFooter" class="hidden">
   <p>Homiemoon Planner 🌺 Oahu 2026</p>
 </div>
@@ -1673,6 +1939,10 @@ let currentSort = 'newest';
 let editingId = null;
 let receipts = [];
 let tempLineItems = [];
+let travelEntries = [];
+let reservations = [];
+let editingTravelId = null;
+let editingResoId = null;
 
 // ===== CATEGORIES =====
 const CATEGORIES = {
@@ -1752,7 +2022,7 @@ document.getElementById('navBar').addEventListener('click', e => {
 function navigateTo(page) {
   currentPage = page;
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.page === page));
-  ['home', 'board', 'poll', 'itinerary', 'map', 'split'].forEach(p => {
+  ['home', 'board', 'poll', 'itinerary', 'map', 'split', 'travel', 'reservations'].forEach(p => {
     document.getElementById('page-' + p).classList.toggle('hidden', p !== page);
   });
   // Show FAB only on board
@@ -1764,6 +2034,8 @@ function navigateTo(page) {
   if (page === 'itinerary') renderItinerary();
   if (page === 'map') renderMap();
   if (page === 'split') { loadReceipts(); showReceiptList(); }
+  if (page === 'travel') loadTravelInfo();
+  if (page === 'reservations') loadReservations();
   // Scroll to top
   window.scrollTo(0, 0);
 }
@@ -1800,6 +2072,8 @@ function renderHome() {
     html += `<div class="stat-card"><div class="num">${count}</div><div class="label">${c.emoji} ${c.label}</div></div>`;
   });
   stats.innerHTML = html;
+  renderCountdown();
+  loadWeather();
 }
 
 // ===== RENDER BOARD =====
@@ -2601,6 +2875,305 @@ async function deleteReceipt(id) {
   } catch (err) {
     toast('Delete failed: ' + err.message, true);
   }
+}
+
+// ===== COUNTDOWN TIMER =====
+function renderCountdown() {
+  const container = document.getElementById('countdownContainer');
+  const tripDate = new Date('2026-08-30T00:00:00-10:00'); // Hawaii time
+  const now = new Date();
+  const diff = tripDate - now;
+
+  if (diff <= 0) {
+    const tripEnd = new Date('2026-09-05T23:59:59-10:00');
+    if (now <= tripEnd) {
+      container.innerHTML = '<div class="countdown-past">🌺 The Homiemoon is HAPPENING! 🤙</div>';
+    } else {
+      container.innerHTML = '<div class="countdown-past">🌺 What a trip! Mahalo, Ohana 🤙</div>';
+    }
+    return;
+  }
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+  container.innerHTML = `<div class="countdown">
+    <div class="countdown-unit"><div class="cd-num">${days}</div><div class="cd-label">Days</div></div>
+    <div class="countdown-unit"><div class="cd-num">${hours}</div><div class="cd-label">Hours</div></div>
+    <div class="countdown-unit"><div class="cd-num">${mins}</div><div class="cd-label">Mins</div></div>
+    <div class="countdown-unit"><div class="cd-num">${secs}</div><div class="cd-label">Secs</div></div>
+  </div>`;
+}
+setInterval(renderCountdown, 1000);
+
+// ===== WEATHER WIDGET =====
+async function loadWeather() {
+  const container = document.getElementById('weatherWidget');
+  try {
+    // Open-Meteo free API — no key needed, Oahu coords
+    const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=21.4389&longitude=-158.0001&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=Pacific/Honolulu');
+    const data = await res.json();
+    const current = data.current;
+    const temp = Math.round(current.temperature_2m);
+    const humidity = current.relative_humidity_2m;
+    const wind = Math.round(current.wind_speed_10m);
+    const code = current.weather_code;
+
+    // Weather code to emoji/description
+    const weatherMap = {
+      0: ['☀️', 'Clear skies'], 1: ['🌤️', 'Mostly clear'], 2: ['⛅', 'Partly cloudy'],
+      3: ['☁️', 'Overcast'], 45: ['🌫️', 'Foggy'], 48: ['🌫️', 'Foggy'],
+      51: ['🌦️', 'Light drizzle'], 53: ['🌦️', 'Drizzle'], 55: ['🌧️', 'Heavy drizzle'],
+      61: ['🌧️', 'Light rain'], 63: ['🌧️', 'Rain'], 65: ['🌧️', 'Heavy rain'],
+      80: ['🌦️', 'Light showers'], 81: ['🌧️', 'Showers'], 82: ['⛈️', 'Heavy showers'],
+      95: ['⛈️', 'Thunderstorm']
+    };
+    const [emoji, desc] = weatherMap[code] || ['🌤️', 'Fair'];
+
+    container.innerHTML = `<div class="weather-widget">
+      <div class="ww-icon">${emoji}</div>
+      <div class="ww-info">
+        <div class="ww-temp">${temp}°F in Oahu right now</div>
+        <div class="ww-desc">${desc}</div>
+        <div class="ww-details">
+          <span>💧 ${humidity}% humidity</span>
+          <span>💨 ${wind} mph wind</span>
+        </div>
+      </div>
+    </div>`;
+  } catch (err) {
+    container.innerHTML = '';
+  }
+}
+
+// ===== TRAVEL INFO =====
+async function loadTravelInfo() {
+  try {
+    travelEntries = await supaFetch('travel_info', 'GET', null, '?order=created_at.asc');
+    if (!travelEntries) travelEntries = [];
+    renderTravelCards();
+  } catch (err) {
+    travelEntries = [];
+    renderTravelCards();
+  }
+}
+
+function renderTravelCards() {
+  const container = document.getElementById('travelCards');
+  if (!travelEntries || travelEntries.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="emoji">✈️</div><p>No travel info yet — add yours so the crew knows when you\'re arriving!</p></div>';
+    return;
+  }
+  container.innerHTML = travelEntries.map(t => {
+    const d = t.data || {};
+    return `<div class="travel-card">
+      <div class="tc-header">
+        <span class="tc-name">✈️ ${esc(t.name)}</span>
+        <div class="tc-actions">
+          <button onclick="editTravel('${t.id}')" title="Edit">✏️</button>
+          <button onclick="deleteTravel('${t.id}')" title="Delete">🗑️</button>
+        </div>
+      </div>
+      <div class="tc-grid">
+        ${d.arrival ? `<div class="tc-item"><strong>Arriving</strong>${esc(d.arrival)}</div>` : ''}
+        ${d.flight_in ? `<div class="tc-item"><strong>Flight In</strong>${esc(d.flight_in)}</div>` : ''}
+        ${d.departure ? `<div class="tc-item"><strong>Departing</strong>${esc(d.departure)}</div>` : ''}
+        ${d.flight_out ? `<div class="tc-item"><strong>Flight Out</strong>${esc(d.flight_out)}</div>` : ''}
+        ${d.hotel ? `<div class="tc-item"><strong>Staying At</strong>${esc(d.hotel)}</div>` : ''}
+        ${d.confirmation ? `<div class="tc-item"><strong>Confirmation #</strong>${esc(d.confirmation)}</div>` : ''}
+        ${d.notes ? `<div class="tc-item" style="grid-column:1/-1"><strong>Notes</strong>${esc(d.notes)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openTravelModal(id) {
+  editingTravelId = id || null;
+  const overlay = document.getElementById('travelModalOverlay');
+  document.getElementById('travelModalTitle').textContent = editingTravelId ? 'Edit Travel Info' : 'Add Travel Info';
+
+  if (editingTravelId) {
+    const t = travelEntries.find(e => e.id === editingTravelId);
+    if (t) {
+      const d = t.data || {};
+      document.getElementById('travelName').value = t.name || '';
+      document.getElementById('travelArrival').value = d.arrival || '';
+      document.getElementById('travelFlightIn').value = d.flight_in || '';
+      document.getElementById('travelDeparture').value = d.departure || '';
+      document.getElementById('travelFlightOut').value = d.flight_out || '';
+      document.getElementById('travelHotel').value = d.hotel || '';
+      document.getElementById('travelConfirmation').value = d.confirmation || '';
+      document.getElementById('travelNotes').value = d.notes || '';
+    }
+  } else {
+    document.getElementById('travelName').value = currentUser;
+    ['travelArrival','travelFlightIn','travelDeparture','travelFlightOut','travelHotel','travelConfirmation','travelNotes'].forEach(id => document.getElementById(id).value = '');
+  }
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeTravelModal(e) {
+  if (e && e.target !== document.getElementById('travelModalOverlay')) return;
+  document.getElementById('travelModalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  editingTravelId = null;
+}
+
+async function saveTravel() {
+  const name = document.getElementById('travelName').value.trim();
+  if (!name) return toast('Enter your name', true);
+
+  const entry = {
+    name,
+    data: {
+      arrival: document.getElementById('travelArrival').value.trim() || null,
+      flight_in: document.getElementById('travelFlightIn').value.trim() || null,
+      departure: document.getElementById('travelDeparture').value.trim() || null,
+      flight_out: document.getElementById('travelFlightOut').value.trim() || null,
+      hotel: document.getElementById('travelHotel').value.trim() || null,
+      confirmation: document.getElementById('travelConfirmation').value.trim() || null,
+      notes: document.getElementById('travelNotes').value.trim() || null,
+    }
+  };
+
+  try {
+    if (editingTravelId) {
+      await supaFetch('travel_info', 'PATCH', entry, `?id=eq.${editingTravelId}`);
+      toast('Travel info updated! ✈️');
+    } else {
+      await supaFetch('travel_info', 'POST', entry);
+      toast('Travel info added! ✈️');
+    }
+    closeTravelModal();
+    await loadTravelInfo();
+  } catch (err) {
+    toast('Error: ' + err.message, true);
+  }
+}
+
+function editTravel(id) { openTravelModal(id); }
+
+async function deleteTravel(id) {
+  if (!confirm('Delete this travel info?')) return;
+  try {
+    await supaFetch('travel_info', 'DELETE', null, `?id=eq.${id}`);
+    toast('Deleted');
+    await loadTravelInfo();
+  } catch (err) { toast('Failed: ' + err.message, true); }
+}
+
+// ===== RESERVATIONS =====
+async function loadReservations() {
+  try {
+    reservations = await supaFetch('reservations', 'GET', null, '?order=created_at.asc');
+    if (!reservations) reservations = [];
+    renderResoCards();
+  } catch (err) {
+    reservations = [];
+    renderResoCards();
+  }
+}
+
+function renderResoCards() {
+  const container = document.getElementById('resoCards');
+  if (!reservations || reservations.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="emoji">🍽️</div><p>No reservations yet — book a spot and add it here!</p></div>';
+    return;
+  }
+  container.innerHTML = reservations.map(r => {
+    const d = r.data || {};
+    return `<div class="travel-card type-reservation">
+      <div class="tc-header">
+        <span class="tc-name">🍽️ ${esc(r.name)}</span>
+        <div class="tc-actions">
+          <button onclick="editReso('${r.id}')" title="Edit">✏️</button>
+          <button onclick="deleteReso('${r.id}')" title="Delete">🗑️</button>
+        </div>
+      </div>
+      <div class="tc-grid">
+        ${d.date_time ? `<div class="tc-item"><strong>When</strong>${esc(d.date_time)}</div>` : ''}
+        ${d.party_size ? `<div class="tc-item"><strong>Party Size</strong>${d.party_size} people</div>` : ''}
+        ${d.booked_by ? `<div class="tc-item"><strong>Booked By</strong>${esc(d.booked_by)}</div>` : ''}
+        ${d.confirmation ? `<div class="tc-item"><strong>Confirmation #</strong>${esc(d.confirmation)}</div>` : ''}
+        ${d.notes ? `<div class="tc-item" style="grid-column:1/-1"><strong>Notes</strong>${esc(d.notes)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openResoModal(id) {
+  editingResoId = id || null;
+  const overlay = document.getElementById('resoModalOverlay');
+  document.getElementById('resoModalTitle').textContent = editingResoId ? 'Edit Reservation' : 'Add Reservation';
+
+  if (editingResoId) {
+    const r = reservations.find(e => e.id === editingResoId);
+    if (r) {
+      const d = r.data || {};
+      document.getElementById('resoVenue').value = r.name || '';
+      document.getElementById('resoDateTime').value = d.date_time || '';
+      document.getElementById('resoParty').value = d.party_size || '';
+      document.getElementById('resoBookedBy').value = d.booked_by || '';
+      document.getElementById('resoConfirmation').value = d.confirmation || '';
+      document.getElementById('resoNotes').value = d.notes || '';
+    }
+  } else {
+    ['resoVenue','resoDateTime','resoParty','resoBookedBy','resoConfirmation','resoNotes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('resoBookedBy').value = currentUser;
+  }
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeResoModal(e) {
+  if (e && e.target !== document.getElementById('resoModalOverlay')) return;
+  document.getElementById('resoModalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  editingResoId = null;
+}
+
+async function saveReso() {
+  const venue = document.getElementById('resoVenue').value.trim();
+  if (!venue) return toast('Enter the restaurant/venue name', true);
+
+  const entry = {
+    name: venue,
+    data: {
+      date_time: document.getElementById('resoDateTime').value.trim() || null,
+      party_size: parseInt(document.getElementById('resoParty').value) || null,
+      booked_by: document.getElementById('resoBookedBy').value.trim() || null,
+      confirmation: document.getElementById('resoConfirmation').value.trim() || null,
+      notes: document.getElementById('resoNotes').value.trim() || null,
+    }
+  };
+
+  try {
+    if (editingResoId) {
+      await supaFetch('reservations', 'PATCH', entry, `?id=eq.${editingResoId}`);
+      toast('Reservation updated! 🍽️');
+    } else {
+      await supaFetch('reservations', 'POST', entry);
+      toast('Reservation added! 🍽️');
+    }
+    closeResoModal();
+    await loadReservations();
+  } catch (err) {
+    toast('Error: ' + err.message, true);
+  }
+}
+
+function editReso(id) { openResoModal(id); }
+
+async function deleteReso(id) {
+  if (!confirm('Delete this reservation?')) return;
+  try {
+    await supaFetch('reservations', 'DELETE', null, `?id=eq.${id}`);
+    toast('Deleted');
+    await loadReservations();
+  } catch (err) { toast('Failed: ' + err.message, true); }
 }
 
 // ===== UTILITIES =====
