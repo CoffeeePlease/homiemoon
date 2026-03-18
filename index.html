@@ -1,0 +1,2615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Homiemoon Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===== CSS VARIABLES ===== */
+:root {
+  --mahogany: #4a2c2a;
+  --mahogany-light: #6b3a36;
+  --gold: #c9a84c;
+  --gold-light: #e6c76b;
+  --gold-dark: #a88a3a;
+  --sunset: #d4763c;
+  --sunset-light: #e8945a;
+  --teal: #2a7b7b;
+  --teal-light: #3a9e9e;
+  --ocean: #1a5f7a;
+  --sand: #f5e6c8;
+  --sand-light: #faf3e6;
+  --sand-dark: #e8d4a8;
+  --cream: #fefaf3;
+  --coral: #e07b6a;
+  --aulani-purple: #6b4c8a;
+  --aulani-light: #8a6aaa;
+  --text-dark: #2c1810;
+  --text-medium: #5a3d2e;
+  --text-light: #8a7060;
+  --shadow-sm: 0 1px 3px rgba(74,44,42,0.1);
+  --shadow-md: 0 4px 12px rgba(74,44,42,0.12);
+  --shadow-lg: 0 8px 30px rgba(74,44,42,0.16);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+}
+
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  font-size: 16px;
+  width: 100%;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--cream);
+  color: var(--text-dark);
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== BACKGROUND DECORATION ===== */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 340px;
+  background: linear-gradient(135deg, var(--mahogany) 0%, var(--mahogany-light) 40%, var(--ocean) 100%);
+  z-index: 0;
+}
+
+/* ===== TOAST ===== */
+.toast-container {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: calc(100% - 32px);
+  max-width: 400px;
+  pointer-events: none;
+}
+.toast {
+  background: var(--mahogany);
+  color: var(--sand-light);
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+  pointer-events: auto;
+  text-align: center;
+}
+.toast.error { background: #8b2020; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-12px); } }
+
+/* ===== HEADER / NAV ===== */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  background: linear-gradient(135deg, var(--mahogany) 0%, var(--mahogany-light) 50%, var(--ocean) 100%);
+  padding: 0;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.3);
+}
+.header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.header-brand .logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.header-nav {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.nav-btn {
+  background: rgba(255,255,255,0.08);
+  border: none;
+  color: rgba(255,255,255,0.7);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.nav-btn:hover, .nav-btn.active {
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+}
+.nav-btn.active {
+  background: var(--gold);
+  color: var(--mahogany);
+  font-weight: 700;
+}
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--mahogany);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+/* ===== MOBILE NAV ADJUSTMENTS ===== */
+@media (max-width: 640px) {
+  .header-inner {
+    flex-wrap: wrap;
+    padding: 10px 12px;
+  }
+  .header-brand .logo { font-size: 1rem; }
+  .header-nav {
+    order: 3;
+    width: 100%;
+    padding-top: 8px;
+    gap: 4px;
+    justify-content: space-between;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .header-nav::-webkit-scrollbar { display: none; }
+  .nav-btn {
+    font-size: 0.72rem;
+    padding: 6px 8px;
+    flex: 1;
+    text-align: center;
+    min-width: 0;
+  }
+  .user-avatar { width: 28px; height: 28px; font-size: 0.75rem; }
+}
+
+/* ===== MAIN CONTAINER ===== */
+.main {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 32px 60px;
+}
+@media (max-width: 640px) {
+  .main { padding: 12px 10px 80px; }
+}
+
+/* ===== WELCOME SCREEN ===== */
+.welcome {
+  min-height: 80vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  z-index: 1;
+}
+.welcome-card {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: 40px 32px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+}
+.welcome-card h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  color: var(--mahogany);
+  margin-bottom: 6px;
+}
+.welcome-card .tagline {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin-bottom: 24px;
+  line-height: 1.5;
+  font-style: italic;
+}
+.welcome-card input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid var(--sand-dark);
+  border-radius: var(--radius-md);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.welcome-card input:focus { border-color: var(--gold); }
+.welcome-card button {
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.welcome-card button:active { transform: scale(0.97); }
+@media (max-width: 640px) {
+  .welcome-card { padding: 30px 20px; }
+  .welcome-card h1 { font-size: 1.6rem; }
+}
+
+/* ===== HOME PAGE ===== */
+.hero {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: 36px 28px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-md);
+  text-align: center;
+}
+.hero h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.8rem;
+  color: var(--mahogany);
+  margin-bottom: 6px;
+}
+.hero .subtitle {
+  font-size: 1rem;
+  color: var(--text-light);
+  margin-bottom: 4px;
+}
+.hero .tagline-home {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  font-style: italic;
+  margin-bottom: 20px;
+  line-height: 1.5;
+  max-width: 440px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.hero .dates {
+  display: inline-block;
+  background: var(--sand);
+  padding: 8px 20px;
+  border-radius: var(--radius-xl);
+  font-weight: 600;
+  color: var(--mahogany);
+  font-size: 0.9rem;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+.stat-card {
+  background: var(--sand-light);
+  border-radius: var(--radius-md);
+  padding: 16px 12px;
+  text-align: center;
+}
+.stat-card .num {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.6rem;
+  color: var(--mahogany);
+  font-weight: 700;
+}
+.stat-card .label {
+  font-size: 0.78rem;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+@media (max-width: 640px) {
+  .hero { padding: 24px 16px; border-radius: var(--radius-lg); }
+  .hero h2 { font-size: 1.4rem; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .stat-card { padding: 12px 8px; }
+  .stat-card .num { font-size: 1.3rem; }
+}
+
+/* ===== BOARD PAGE ===== */
+.board-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+.filter-btn {
+  padding: 8px 14px;
+  border: 2px solid var(--sand-dark);
+  background: white;
+  border-radius: var(--radius-xl);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-medium);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.filter-btn:hover { border-color: var(--gold); }
+.filter-btn.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: white;
+  font-weight: 600;
+}
+.sort-select {
+  margin-left: auto;
+  padding: 8px 12px;
+  border: 2px solid var(--sand-dark);
+  border-radius: var(--radius-md);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  background: white;
+  cursor: pointer;
+}
+@media (max-width: 640px) {
+  .board-controls {
+    gap: 6px;
+    padding-bottom: 8px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .board-controls::-webkit-scrollbar { display: none; }
+  .filter-btn { padding: 7px 10px; font-size: 0.72rem; flex-shrink: 0; }
+  .sort-select { font-size: 0.75rem; flex-shrink: 0; }
+}
+
+/* ===== IDEA CARDS ===== */
+.ideas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.idea-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s, transform 0.15s;
+  display: flex;
+  flex-direction: column;
+}
+.idea-card:hover { box-shadow: var(--shadow-md); }
+.idea-card .card-photo {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+.idea-card .card-body {
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.idea-card .card-category {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--teal);
+  margin-bottom: 6px;
+}
+.idea-card .card-category.aulani { color: var(--aulani-purple); }
+.idea-card .card-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--mahogany);
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+.idea-card .card-desc {
+  font-size: 0.85rem;
+  color: var(--text-medium);
+  line-height: 1.5;
+  margin-bottom: 10px;
+  flex: 1;
+}
+.idea-card .card-desc a {
+  color: var(--teal);
+  text-decoration: underline;
+}
+.idea-card .card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.idea-card .card-links {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.idea-card .card-links a {
+  font-size: 0.75rem;
+  color: var(--teal);
+  text-decoration: none;
+  padding: 4px 10px;
+  border: 1px solid var(--teal);
+  border-radius: var(--radius-xl);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.idea-card .card-links a:hover {
+  background: var(--teal);
+  color: white;
+}
+.idea-card .card-links a.yelp-link { color: #d32323; border-color: #d32323; }
+.idea-card .card-links a.yelp-link:hover { background: #d32323; color: white; }
+.idea-card .card-links a.info-link { color: var(--gold-dark); border-color: var(--gold-dark); }
+.idea-card .card-links a.info-link:hover { background: var(--gold-dark); color: white; }
+.idea-card .card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--sand);
+}
+.vote-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--sand-light);
+  border: 1px solid var(--sand-dark);
+  border-radius: var(--radius-xl);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.vote-btn:hover, .vote-btn.voted {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: white;
+}
+.card-actions {
+  display: flex;
+  gap: 4px;
+}
+.card-actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  transition: background 0.2s;
+}
+.card-actions button:hover { background: var(--sand); }
+
+@media (max-width: 640px) {
+  .ideas-grid { grid-template-columns: 1fr; gap: 12px; }
+  .idea-card .card-photo { height: 160px; }
+  .idea-card .card-body { padding: 14px; }
+  .idea-card .card-title { font-size: 1rem; }
+  .idea-card .card-links { gap: 6px; }
+  .idea-card .card-links a { font-size: 0.7rem; padding: 3px 8px; }
+}
+
+/* ===== ADD BUTTON (FAB) ===== */
+.fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold), var(--sunset));
+  color: white;
+  border: none;
+  font-size: 1.8rem;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(201,168,76,0.4);
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s;
+}
+.fab:active { transform: scale(0.92); }
+@media (max-width: 640px) {
+  .fab { bottom: 18px; right: 16px; width: 52px; height: 52px; font-size: 1.6rem; }
+}
+
+/* ===== MODAL ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.modal {
+  background: white;
+  width: 100%;
+  max-width: 540px;
+  max-height: 85vh;
+  border-radius: var(--radius-xl);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  transform: translateY(20px);
+  transition: transform 0.3s ease;
+  padding: 28px 24px 32px;
+}
+.modal-overlay.open .modal {
+  transform: translateY(0);
+}
+.modal h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.3rem;
+  color: var(--mahogany);
+  margin-bottom: 16px;
+}
+.modal .form-group {
+  margin-bottom: 14px;
+}
+.modal label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-medium);
+  margin-bottom: 4px;
+}
+.modal input,
+.modal select,
+.modal textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid var(--sand-dark);
+  border-radius: var(--radius-md);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+.modal input:focus,
+.modal select:focus,
+.modal textarea:focus { border-color: var(--gold); }
+.modal textarea { resize: vertical; min-height: 80px; }
+.modal .form-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.modal .form-row input { flex: 1; }
+.modal .search-btn {
+  padding: 12px 14px;
+  background: var(--sand);
+  border: 2px solid var(--sand-dark);
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.modal .search-btn:hover { background: var(--gold); color: white; border-color: var(--gold); }
+.modal .upload-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.modal .upload-btn {
+  padding: 12px 14px;
+  background: var(--teal);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.modal .btn-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+.modal .btn-row button {
+  flex: 1;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.15s;
+}
+.modal .btn-row button:active { transform: scale(0.97); }
+.modal .btn-submit {
+  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+  color: white;
+}
+.modal .btn-cancel {
+  background: var(--sand);
+  color: var(--text-medium);
+}
+@media (max-width: 640px) {
+  .modal-overlay { align-items: flex-end; }
+  .modal {
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding: 20px 16px 28px;
+    transform: translateY(100%);
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal .form-row { flex-direction: column; }
+  .modal .form-row input { width: 100%; }
+  .modal .search-btn { width: 100%; text-align: center; }
+}
+
+/* ===== POLL PAGE ===== */
+.poll-section {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: 28px 24px;
+  box-shadow: var(--shadow-md);
+}
+.poll-section h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  color: var(--mahogany);
+  margin-bottom: 4px;
+}
+.poll-section .poll-sub {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin-bottom: 20px;
+}
+.poll-option {
+  border: 2px solid var(--sand-dark);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.poll-option:hover { border-color: var(--gold); }
+.poll-option.selected {
+  border-color: var(--gold);
+  background: var(--sand-light);
+}
+.poll-option .bar-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--gold);
+  opacity: 0.08;
+  transform-origin: left;
+  transition: transform 0.4s ease;
+}
+.poll-option .poll-content {
+  position: relative;
+  z-index: 1;
+}
+.poll-option .poll-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--mahogany);
+}
+.poll-option .poll-desc {
+  font-size: 0.82rem;
+  color: var(--text-medium);
+  margin-top: 3px;
+}
+.poll-option .poll-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: var(--text-light);
+}
+.poll-option .poll-voters {
+  font-size: 0.72rem;
+  color: var(--text-light);
+  margin-top: 4px;
+}
+.poll-add {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+}
+.poll-add input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 2px solid var(--sand-dark);
+  border-radius: var(--radius-md);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  outline: none;
+}
+.poll-add input:focus { border-color: var(--gold); }
+.poll-add button {
+  padding: 10px 18px;
+  background: var(--gold);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .poll-section { padding: 20px 14px; border-radius: var(--radius-lg); }
+  .poll-section h2 { font-size: 1.25rem; }
+  .poll-option { padding: 12px; }
+  .poll-add { flex-direction: column; }
+  .poll-add button { width: 100%; text-align: center; padding: 12px; }
+}
+
+/* ===== ITINERARY PAGE ===== */
+.itinerary-section {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: 24px 20px;
+  box-shadow: var(--shadow-md);
+}
+.itinerary-section h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  color: var(--mahogany);
+  margin-bottom: 4px;
+}
+.itinerary-section .itin-sub {
+  font-size: 0.82rem;
+  color: var(--text-light);
+  margin-bottom: 16px;
+}
+.itin-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+}
+.itin-day {
+  min-height: 200px;
+  background: var(--sand-light);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  transition: background 0.2s;
+}
+.itin-day.drag-over { background: var(--sand); }
+.itin-day .day-title {
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: var(--mahogany);
+  text-align: center;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--sand-dark);
+}
+.itin-day .day-title small {
+  display: block;
+  font-weight: 500;
+  font-size: 0.68rem;
+  color: var(--text-light);
+}
+.itin-chip {
+  background: white;
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  margin-bottom: 6px;
+  font-size: 0.75rem;
+  color: var(--text-dark);
+  box-shadow: var(--shadow-sm);
+  cursor: grab;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px;
+  word-break: break-word;
+}
+.itin-chip:active { cursor: grabbing; }
+.itin-chip .chip-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.7rem;
+  color: var(--text-light);
+  padding: 2px;
+  flex-shrink: 0;
+}
+.unassigned-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 2px solid var(--sand);
+}
+.unassigned-section h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem;
+  color: var(--mahogany);
+  margin-bottom: 4px;
+}
+.unassigned-section .un-sub {
+  font-size: 0.78rem;
+  color: var(--text-light);
+  margin-bottom: 10px;
+}
+.unassigned-pool {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pool-chip {
+  background: var(--sand);
+  padding: 6px 12px;
+  border-radius: var(--radius-xl);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-medium);
+  cursor: grab;
+  transition: background 0.2s;
+  user-select: none;
+}
+.pool-chip:active { cursor: grabbing; }
+.pool-chip:hover { background: var(--gold-light); }
+
+/* MOBILE ITINERARY: stack days vertically */
+@media (max-width: 900px) {
+  .itin-days {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+}
+@media (max-width: 640px) {
+  .itinerary-section { padding: 18px 12px; border-radius: var(--radius-lg); }
+  .itinerary-section h2 { font-size: 1.2rem; }
+  .itin-days {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .itin-day {
+    min-height: auto;
+    padding: 12px;
+  }
+  .itin-day .day-title {
+    font-size: 0.85rem;
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .itin-day .day-title small { display: inline; margin-left: 6px; }
+  .itin-chip { font-size: 0.8rem; padding: 10px; }
+  .pool-chip { font-size: 0.78rem; padding: 7px 12px; }
+  .unassigned-pool { gap: 6px; }
+}
+
+/* ===== MAP PAGE ===== */
+.map-section {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: 24px 20px;
+  box-shadow: var(--shadow-md);
+}
+.map-section h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  color: var(--mahogany);
+  margin-bottom: 12px;
+}
+.map-embed {
+  width: 100%;
+  height: 400px;
+  border: none;
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+}
+.map-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.map-card {
+  background: var(--sand-light);
+  border-radius: var(--radius-md);
+  padding: 14px;
+}
+.map-card .mc-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--mahogany);
+  margin-bottom: 3px;
+}
+.map-card .mc-cat {
+  font-size: 0.72rem;
+  color: var(--teal);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.map-card a {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: var(--teal);
+}
+@media (max-width: 640px) {
+  .map-section { padding: 16px 12px; border-radius: var(--radius-lg); }
+  .map-section h2 { font-size: 1.2rem; }
+  .map-embed { height: 260px; }
+  .map-cards { grid-template-columns: 1fr; gap: 8px; }
+}
+
+/* ===== EMPTY STATES ===== */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-light);
+}
+.empty-state .emoji { font-size: 2.5rem; margin-bottom: 10px; }
+.empty-state p { font-size: 0.9rem; }
+
+/* ===== REFRESH BAR ===== */
+.refresh-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.refresh-bar .count {
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+.refresh-btn {
+  padding: 6px 14px;
+  background: var(--sand);
+  border: 1px solid var(--sand-dark);
+  border-radius: var(--radius-xl);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.refresh-btn:hover { background: var(--gold); color: white; border-color: var(--gold); }
+
+/* ===== LOADING ===== */
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+}
+.loading-spinner::after {
+  content: '';
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--sand-dark);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== FOOTER ===== */
+.footer {
+  text-align: center;
+  padding: 30px 16px 20px;
+  font-size: 0.78rem;
+  color: var(--text-light);
+  position: relative;
+  z-index: 1;
+}
+
+/* ===== SPLIT PAGE ===== */
+.split-section {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: 28px 24px;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 16px;
+}
+.split-section h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  color: var(--mahogany);
+  margin-bottom: 4px;
+}
+.split-section .split-sub {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin-bottom: 20px;
+}
+.split-new-btn {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: transform 0.15s;
+}
+.split-new-btn:active { transform: scale(0.97); }
+.split-new-btn:hover { box-shadow: var(--shadow-md); }
+
+/* Receipt cards list */
+.receipt-list { display: flex; flex-direction: column; gap: 12px; }
+.receipt-card {
+  background: var(--sand-light);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+}
+.receipt-card:hover { border-color: var(--gold); }
+.receipt-card .rc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.receipt-card .rc-title {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--mahogany);
+}
+.receipt-card .rc-total {
+  font-weight: 700;
+  color: var(--gold-dark);
+  font-size: 1rem;
+}
+.receipt-card .rc-meta {
+  font-size: 0.78rem;
+  color: var(--text-light);
+}
+.receipt-card .rc-status {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.rc-badge {
+  font-size: 0.7rem;
+  padding: 3px 8px;
+  border-radius: var(--radius-xl);
+  font-weight: 600;
+}
+.rc-badge.paid { background: #d4edda; color: #155724; }
+.rc-badge.unpaid { background: #f8d7da; color: #721c24; }
+.receipt-card .rc-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  transition: background 0.2s;
+}
+.receipt-card .rc-delete:hover { background: var(--sand); }
+
+/* Upload area */
+.upload-area {
+  border: 2px dashed var(--sand-dark);
+  border-radius: var(--radius-md);
+  padding: 30px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 16px;
+}
+.upload-area:hover, .upload-area.drag-hover {
+  border-color: var(--gold);
+  background: var(--sand-light);
+}
+.upload-area .upload-icon { font-size: 2rem; margin-bottom: 8px; }
+.upload-area p { font-size: 0.85rem; color: var(--text-light); }
+.upload-area p strong { color: var(--text-medium); }
+
+/* Receipt detail view */
+.receipt-detail {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: 24px 20px;
+  box-shadow: var(--shadow-md);
+}
+.receipt-back {
+  background: none;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  color: var(--teal);
+  cursor: pointer;
+  padding: 4px 0;
+  margin-bottom: 12px;
+}
+.receipt-back:hover { text-decoration: underline; }
+.receipt-detail h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.3rem;
+  color: var(--mahogany);
+  margin-bottom: 4px;
+}
+.receipt-detail .rd-meta {
+  font-size: 0.82rem;
+  color: var(--text-light);
+  margin-bottom: 16px;
+}
+
+/* Line items table */
+.line-items { margin-bottom: 20px; }
+.line-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--sand);
+  transition: background 0.15s;
+}
+.line-item:hover { background: var(--sand-light); }
+.line-item .li-name {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--text-dark);
+}
+.line-item .li-price {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--mahogany);
+  min-width: 60px;
+  text-align: right;
+}
+.line-item .li-claims {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-width: 100px;
+}
+.claim-chip {
+  font-size: 0.68rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-xl);
+  background: var(--teal);
+  color: white;
+  font-weight: 600;
+}
+.claim-btn {
+  padding: 4px 10px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--teal);
+  background: none;
+  color: var(--teal);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.claim-btn:hover { background: var(--teal); color: white; }
+.claim-btn.claimed {
+  background: var(--teal);
+  color: white;
+}
+
+/* Totals section */
+.extras-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  color: var(--text-medium);
+}
+.extras-row.total-row {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--mahogany);
+  border-top: 2px solid var(--mahogany);
+  padding-top: 10px;
+  margin-top: 4px;
+}
+
+/* Who owes what */
+.owes-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 2px solid var(--sand);
+}
+.owes-section h4 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem;
+  color: var(--mahogany);
+  margin-bottom: 10px;
+}
+.owe-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  background: var(--sand-light);
+}
+.owe-row .owe-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-dark);
+}
+.owe-row .owe-amount {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--sunset);
+}
+.owe-row .owe-amount.zero { color: #28a745; }
+.owe-row .paid-toggle {
+  padding: 6px 14px;
+  border-radius: var(--radius-xl);
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.owe-row .paid-toggle.unpaid {
+  background: #f8d7da;
+  color: #721c24;
+}
+.owe-row .paid-toggle.paid {
+  background: #d4edda;
+  color: #155724;
+}
+.owe-row.is-payer {
+  background: linear-gradient(135deg, var(--gold-light), var(--gold));
+  color: white;
+}
+.owe-row.is-payer .owe-name { color: white; }
+.owe-row.is-payer .owe-amount { color: white; }
+
+/* Processing overlay */
+.processing-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+}
+.processing-overlay .spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--sand-dark);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin-bottom: 16px;
+}
+.processing-overlay p {
+  font-size: 0.9rem;
+  color: var(--text-medium);
+}
+
+/* Manual entry form */
+.manual-form { margin-bottom: 16px; }
+.manual-form .mf-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+.manual-form .mf-row input {
+  padding: 10px 12px;
+  border: 2px solid var(--sand-dark);
+  border-radius: var(--radius-md);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  outline: none;
+}
+.manual-form .mf-row input:focus { border-color: var(--gold); }
+.manual-form .mf-row input[type="text"] { flex: 1; }
+.manual-form .mf-row input[type="number"] { width: 100px; }
+.manual-form .mf-add {
+  padding: 10px 16px;
+  background: var(--teal);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.manual-form .mf-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--text-light);
+  padding: 4px;
+}
+
+@media (max-width: 640px) {
+  .split-section { padding: 20px 14px; border-radius: var(--radius-lg); }
+  .split-section h2 { font-size: 1.25rem; }
+  .receipt-detail { padding: 18px 14px; }
+  .line-item { flex-wrap: wrap; gap: 6px; padding: 10px 8px; }
+  .line-item .li-claims { min-width: unset; width: 100%; margin-top: 4px; }
+  .owe-row { flex-wrap: wrap; gap: 6px; }
+  .manual-form .mf-row { flex-wrap: wrap; }
+  .manual-form .mf-row input[type="number"] { width: 80px; }
+  .upload-area { padding: 20px 16px; }
+}
+
+/* ===== UTILITY ===== */
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="toast-container" id="toasts"></div>
+
+<!-- ===== WELCOME SCREEN ===== -->
+<div id="welcomeScreen" class="welcome">
+  <div class="welcome-card">
+    <div style="font-size:2.5rem;margin-bottom:8px;">🌺</div>
+    <h1>Homiemoon Planner</h1>
+    <p style="font-size:0.9rem;color:var(--text-medium);margin-bottom:8px;line-height:1.5;">For those who have gotten married these past six years, welcome to your Homiemoon.</p>
+    <p class="tagline">"We're totally only going to chill, relax and enjoy the beaches. Totally not drinkin. Chill Vibes only"</p>
+    <input type="text" id="nameInput" placeholder="Enter your name" autocomplete="off">
+    <button onclick="enterApp()">Let's Go 🤙</button>
+  </div>
+</div>
+
+<!-- ===== HEADER ===== -->
+<div class="header hidden" id="appHeader">
+  <div class="header-inner">
+    <div class="header-brand">
+      <span class="logo">🌺 Homiemoon</span>
+    </div>
+    <nav class="header-nav" id="navBar">
+      <button class="nav-btn active" data-page="home">Home</button>
+      <button class="nav-btn" data-page="board">Board</button>
+      <button class="nav-btn" data-page="poll">Poll</button>
+      <button class="nav-btn" data-page="itinerary">Itinerary</button>
+      <button class="nav-btn" data-page="map">Map</button>
+      <button class="nav-btn" data-page="split">Split</button>
+    </nav>
+    <div class="header-user">
+      <div class="user-avatar" id="userAvatar"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="main hidden" id="appMain">
+
+  <!-- HOME PAGE -->
+  <div id="page-home">
+    <div class="hero">
+      <h2>We're Totally Chilling Guys</h2>
+      <p class="subtitle">To those who have gotten married in the past six years, welcome to your Homiemoon</p>
+      <p class="tagline-home">We're totally only going to chill, relax and enjoy the beaches. Totally not drinkin. Chill Vibes only</p>
+      <div class="dates">🌴 Aug 30 – Sep 5, 2026 · Oahu, HI</div>
+      <div class="stats-grid" id="homeStats"></div>
+    </div>
+  </div>
+
+  <!-- BOARD PAGE -->
+  <div id="page-board" class="hidden">
+    <div class="refresh-bar">
+      <span class="count" id="ideaCount"></span>
+      <button class="refresh-btn" onclick="loadIdeas()">🔄 Refresh</button>
+    </div>
+    <div class="board-controls" id="filterBar"></div>
+    <div class="ideas-grid" id="ideasGrid"></div>
+  </div>
+
+  <!-- POLL PAGE -->
+  <div id="page-poll" class="hidden">
+    <div class="poll-section">
+      <h2>🗳️ Where Are We Staying?</h2>
+      <p class="poll-sub">Vote for your pick, or add a new option</p>
+      <div id="pollOptions"></div>
+      <div class="poll-add">
+        <input type="text" id="pollNewOption" placeholder="Suggest another spot...">
+        <button onclick="addPollOption()">Add Option</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ITINERARY PAGE -->
+  <div id="page-itinerary" class="hidden">
+    <div class="itinerary-section">
+      <h2>📅 Trip Itinerary</h2>
+      <p class="itin-sub">Drag ideas into days — same idea can go on multiple days</p>
+      <div class="itin-days" id="itinDays"></div>
+      <div class="unassigned-section">
+        <h3>All Ideas</h3>
+        <p class="un-sub">Drag these into a day above</p>
+        <div class="unassigned-pool" id="unassignedPool"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP PAGE -->
+  <div id="page-map" class="hidden">
+    <div class="map-section">
+      <h2>🗺️ Map View</h2>
+      <iframe class="map-embed" id="mapEmbed" src=""></iframe>
+      <div class="map-cards" id="mapCards"></div>
+    </div>
+  </div>
+
+  <!-- SPLIT PAGE -->
+  <div id="page-split" class="hidden">
+    <div id="splitListView">
+      <div class="split-section">
+        <h2>💸 Split the Bill</h2>
+        <p class="split-sub">Upload a receipt or enter items manually. Everyone claims what they ordered — tax & tip split evenly.</p>
+        <button class="split-new-btn" onclick="showNewReceipt()">+ New Receipt</button>
+        <div class="receipt-list" id="receiptList"></div>
+      </div>
+    </div>
+
+    <!-- New receipt form -->
+    <div id="splitNewView" class="hidden">
+      <div class="split-section">
+        <button class="receipt-back" onclick="cancelNewReceipt()">← Back to receipts</button>
+        <h2>📝 New Receipt</h2>
+        <div class="form-group" style="margin:12px 0">
+          <label>Receipt Name *</label>
+          <input type="text" id="receiptName" placeholder="e.g. Dinner at Duke's Waikiki" style="width:100%;padding:12px 14px;border:2px solid var(--sand-dark);border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.95rem;outline:none;">
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Who paid?</label>
+          <input type="text" id="receiptPayer" placeholder="Name of person who covered the bill" style="width:100%;padding:12px 14px;border:2px solid var(--sand-dark);border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.95rem;outline:none;">
+        </div>
+
+        <label style="font-size:0.8rem;font-weight:600;color:var(--text-medium);display:block;margin-bottom:8px;">Upload receipt photo (optional)</label>
+        <div class="upload-area" id="receiptUploadArea" onclick="document.getElementById('receiptFileInput').click()" ondragover="event.preventDefault();this.classList.add('drag-hover')" ondragleave="this.classList.remove('drag-hover')" ondrop="handleReceiptDrop(event)">
+          <div class="upload-icon">📸</div>
+          <p><strong>Tap to upload</strong> or drag a receipt photo</p>
+          <p style="font-size:0.75rem;margin-top:4px;">We'll read the items automatically</p>
+          <input type="file" id="receiptFileInput" accept="image/*" style="display:none" onchange="handleReceiptUpload(this)">
+        </div>
+        <div id="receiptProcessing" class="processing-overlay hidden">
+          <div class="spinner"></div>
+          <p>Reading your receipt...</p>
+        </div>
+        <div id="receiptPreview" style="display:none;margin-bottom:12px;text-align:center;">
+          <img id="receiptPreviewImg" style="max-width:100%;max-height:200px;border-radius:8px;">
+        </div>
+
+        <h3 style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--mahogany);margin:16px 0 8px;">Line Items</h3>
+        <div class="manual-form" id="lineItemsForm"></div>
+        <button onclick="addManualLineItem()" style="padding:8px 14px;background:var(--teal);color:white;border:none;border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;font-size:0.82rem;margin-bottom:16px;">+ Add Item</button>
+
+        <div style="display:flex;gap:12px;margin-bottom:12px;">
+          <div style="flex:1">
+            <label style="font-size:0.8rem;font-weight:600;color:var(--text-medium);display:block;margin-bottom:4px;">Tax</label>
+            <input type="number" id="receiptTax" step="0.01" min="0" value="0" placeholder="0.00" style="width:100%;padding:10px 12px;border:2px solid var(--sand-dark);border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;">
+          </div>
+          <div style="flex:1">
+            <label style="font-size:0.8rem;font-weight:600;color:var(--text-medium);display:block;margin-bottom:4px;">Tip</label>
+            <input type="number" id="receiptTip" step="0.01" min="0" value="0" placeholder="0.00" style="width:100%;padding:10px 12px;border:2px solid var(--sand-dark);border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;">
+          </div>
+        </div>
+
+        <div class="btn-row" style="display:flex;gap:10px;margin-top:18px;">
+          <button class="btn-cancel" onclick="cancelNewReceipt()" style="flex:1;padding:14px;border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.95rem;font-weight:600;cursor:pointer;border:none;background:var(--sand);color:var(--text-medium);">Cancel</button>
+          <button class="btn-submit" onclick="saveReceipt()" style="flex:1;padding:14px;border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.95rem;font-weight:600;cursor:pointer;border:none;background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:white;">Save Receipt</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Receipt detail view -->
+    <div id="splitDetailView" class="hidden">
+      <div class="receipt-detail" id="receiptDetail"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FAB -->
+<button class="fab hidden" id="fabBtn" onclick="openModal()">+</button>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 id="modalTitle">Add an Idea</h3>
+    <div class="form-group">
+      <label>Title *</label>
+      <input type="text" id="formTitle" placeholder="e.g. Leonard's Bakery">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="formDesc" placeholder="Why should the crew check this out?"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Category *</label>
+      <select id="formCategory">
+        <option value="food">🍽️ Island Eats</option>
+        <option value="activities">🏄 Activities</option>
+        <option value="beaches">🏖️ Beaches</option>
+        <option value="hiking">🥾 Hiking</option>
+        <option value="nightlife">🌙 Evening Magic</option>
+        <option value="hotels">🏨 Hotels</option>
+        <option value="shopping">🛍️ Treasures</option>
+        <option value="culture">🎭 Heritage & Mana</option>
+        <option value="aulani">🏰 Aulani Resort</option>
+        <option value="other">💡 Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Location</label>
+      <input type="text" id="formLocation" placeholder="e.g. Waikiki, North Shore">
+    </div>
+    <div class="form-group">
+      <label>Google Maps Link</label>
+      <div class="form-row">
+        <input type="url" id="formMaps" placeholder="Paste Google Maps URL">
+        <button class="search-btn" onclick="searchMaps()">🗺️ Search</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Yelp Link</label>
+      <div class="form-row">
+        <input type="url" id="formYelp" placeholder="Paste Yelp URL">
+        <button class="search-btn" onclick="searchYelp()">⭐ Search</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Official / Info Link</label>
+      <input type="url" id="formInfo" placeholder="Paste official page URL">
+    </div>
+    <div class="form-group">
+      <label>Photo</label>
+      <div class="upload-row">
+        <input type="url" id="formPhoto" placeholder="Paste image URL" style="flex:1">
+        <button class="upload-btn" onclick="document.getElementById('fileUpload').click()">📷 Upload</button>
+        <input type="file" id="fileUpload" accept="image/*" style="display:none" onchange="uploadPhoto(this)">
+      </div>
+      <div id="photoPreview" style="margin-top:8px;display:none;">
+        <img style="max-width:100%;max-height:120px;border-radius:8px;">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-submit" id="submitBtn" onclick="submitIdea()">Add Idea</button>
+    </div>
+  </div>
+</div>
+
+<div class="footer" id="appFooter" class="hidden">
+  <p>Homiemoon Planner 🌺 Oahu 2026</p>
+</div>
+
+<script>
+// ===== SUPABASE CONFIG =====
+const SUPABASE_URL = 'https://gkxprpzeibbrgrrujuji.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdreHBycHplaWJicmdycnVqdWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3MTI4ODEsImV4cCI6MjA4OTI4ODg4MX0.4tCoDW6hcd3GpkI6oTWu4CthM5Kmdz3eWJaJNXn0eKI';
+
+const headers = {
+  'apikey': SUPABASE_KEY,
+  'Authorization': `Bearer ${SUPABASE_KEY}`,
+  'Content-Type': 'application/json',
+  'Prefer': 'return=representation'
+};
+
+// ===== STATE =====
+let currentUser = '';
+let ideas = [];
+let pollData = [];
+let itineraryData = {};
+let currentPage = 'home';
+let currentFilter = 'all';
+let currentSort = 'newest';
+let editingId = null;
+let receipts = [];
+let tempLineItems = [];
+
+// ===== CATEGORIES =====
+const CATEGORIES = {
+  food: { label: 'Island Eats', emoji: '🍽️', color: '#d4763c' },
+  activities: { label: 'Activities', emoji: '🏄', color: '#2a7b7b' },
+  beaches: { label: 'Beaches', emoji: '🏖️', color: '#1a5f7a' },
+  hiking: { label: 'Hiking', emoji: '🥾', color: '#5a8a3a' },
+  nightlife: { label: 'Evening Magic', emoji: '🌙', color: '#6b3a6b' },
+  hotels: { label: 'Hotels', emoji: '🏨', color: '#8a6a3a' },
+  shopping: { label: 'Treasures', emoji: '🛍️', color: '#c9547a' },
+  culture: { label: 'Heritage & Mana', emoji: '🎭', color: '#9a5a2a' },
+  aulani: { label: 'Aulani Resort', emoji: '🏰', color: '#6b4c8a' },
+  other: { label: 'Other', emoji: '💡', color: '#7a7a7a' }
+};
+
+const TRIP_DAYS = [
+  { key: 'aug-30', label: 'Aug 30', day: 'Sun' },
+  { key: 'aug-31', label: 'Aug 31', day: 'Mon' },
+  { key: 'sep-01', label: 'Sep 1', day: 'Tue' },
+  { key: 'sep-02', label: 'Sep 2', day: 'Wed' },
+  { key: 'sep-03', label: 'Sep 3', day: 'Thu' },
+  { key: 'sep-04', label: 'Sep 4', day: 'Fri' },
+  { key: 'sep-05', label: 'Sep 5', day: 'Sat' },
+];
+
+// ===== SUPABASE HELPERS =====
+async function supaFetch(table, method, body, query = '') {
+  const url = `${SUPABASE_URL}/rest/v1/${table}${query}`;
+  const opts = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+// ===== TOAST =====
+function toast(msg, isError = false) {
+  const c = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ===== ENTER APP =====
+function enterApp() {
+  const name = document.getElementById('nameInput').value.trim();
+  if (!name) return toast('Enter your name!', true);
+  currentUser = name;
+  document.getElementById('welcomeScreen').classList.add('hidden');
+  document.getElementById('appHeader').classList.remove('hidden');
+  document.getElementById('appMain').classList.remove('hidden');
+  document.getElementById('fabBtn').classList.remove('hidden');
+  document.getElementById('userAvatar').textContent = name[0].toUpperCase();
+  loadIdeas();
+  loadPoll();
+  loadItinerary();
+}
+
+document.getElementById('nameInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') enterApp();
+});
+
+// ===== NAVIGATION =====
+document.getElementById('navBar').addEventListener('click', e => {
+  const btn = e.target.closest('.nav-btn');
+  if (!btn) return;
+  const page = btn.dataset.page;
+  navigateTo(page);
+});
+
+function navigateTo(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.page === page));
+  ['home', 'board', 'poll', 'itinerary', 'map', 'split'].forEach(p => {
+    document.getElementById('page-' + p).classList.toggle('hidden', p !== page);
+  });
+  // Show FAB only on board
+  document.getElementById('fabBtn').classList.toggle('hidden', page !== 'board');
+  // Refresh page data
+  if (page === 'home') renderHome();
+  if (page === 'board') renderBoard();
+  if (page === 'poll') renderPoll();
+  if (page === 'itinerary') renderItinerary();
+  if (page === 'map') renderMap();
+  if (page === 'split') { loadReceipts(); showReceiptList(); }
+  // Scroll to top
+  window.scrollTo(0, 0);
+}
+
+// ===== LOAD IDEAS =====
+async function loadIdeas() {
+  try {
+    ideas = await supaFetch('ideas', 'GET', null, '?order=created_at.desc');
+    if (currentPage === 'board') renderBoard();
+    if (currentPage === 'home') renderHome();
+    if (currentPage === 'itinerary') renderItinerary();
+    if (currentPage === 'map') renderMap();
+  } catch (err) {
+    toast('Failed to load ideas: ' + err.message, true);
+  }
+}
+
+// ===== RENDER HOME =====
+function renderHome() {
+  const stats = document.getElementById('homeStats');
+  const nonAulani = ideas.filter(i => i.category !== 'aulani');
+  const catCounts = {};
+  nonAulani.forEach(i => {
+    catCounts[i.category] = (catCounts[i.category] || 0) + 1;
+  });
+  const aulaniCount = ideas.filter(i => i.category === 'aulani').length;
+  let html = `<div class="stat-card"><div class="num">${ideas.length}</div><div class="label">Total Ideas</div></div>`;
+  html += `<div class="stat-card"><div class="num">${Object.keys(catCounts).length}</div><div class="label">Categories</div></div>`;
+  if (aulaniCount > 0) {
+    html += `<div class="stat-card"><div class="num">${aulaniCount}</div><div class="label">Aulani Activities</div></div>`;
+  }
+  Object.entries(catCounts).slice(0, 3).forEach(([cat, count]) => {
+    const c = CATEGORIES[cat] || CATEGORIES.other;
+    html += `<div class="stat-card"><div class="num">${count}</div><div class="label">${c.emoji} ${c.label}</div></div>`;
+  });
+  stats.innerHTML = html;
+}
+
+// ===== RENDER BOARD =====
+function renderBoard() {
+  // Filter bar
+  const filterBar = document.getElementById('filterBar');
+  let fHtml = `<button class="filter-btn ${currentFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">✦ All (non-Aulani)</button>`;
+  Object.entries(CATEGORIES).forEach(([key, cat]) => {
+    const count = ideas.filter(i => i.category === key).length;
+    if (count > 0) {
+      fHtml += `<button class="filter-btn ${currentFilter === key ? 'active' : ''}" onclick="setFilter('${key}')">${cat.emoji} ${cat.label} (${count})</button>`;
+    }
+  });
+  fHtml += `<select class="sort-select" onchange="setSort(this.value)">
+    <option value="newest" ${currentSort === 'newest' ? 'selected' : ''}>Newest</option>
+    <option value="oldest" ${currentSort === 'oldest' ? 'selected' : ''}>Oldest</option>
+    <option value="upvotes" ${currentSort === 'upvotes' ? 'selected' : ''}>Most Voted</option>
+  </select>`;
+  filterBar.innerHTML = fHtml;
+
+  // Filter
+  let filtered = ideas;
+  if (currentFilter === 'all') {
+    filtered = ideas.filter(i => i.category !== 'aulani');
+  } else {
+    filtered = ideas.filter(i => i.category === currentFilter);
+  }
+
+  // Sort
+  if (currentSort === 'oldest') filtered.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  else if (currentSort === 'upvotes') filtered.sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0));
+  else filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  document.getElementById('ideaCount').textContent = `${filtered.length} idea${filtered.length !== 1 ? 's' : ''}`;
+
+  const grid = document.getElementById('ideasGrid');
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty-state"><div class="emoji">🌺</div><p>No ideas yet — be the first to add one!</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(idea => {
+    const cat = CATEGORIES[idea.category] || CATEGORIES.other;
+    const voted = (idea.upvoted_by || []).includes(currentUser);
+    let links = '';
+    if (idea.maps_link) links += `<a href="${esc(idea.maps_link)}" target="_blank" rel="noopener">🗺️ Map</a>`;
+    if (idea.yelp_link) links += `<a href="${esc(idea.yelp_link)}" target="_blank" rel="noopener" class="yelp-link">⭐ Yelp</a>`;
+    if (idea.info_link) links += `<a href="${esc(idea.info_link)}" target="_blank" rel="noopener" class="info-link">📖 Official</a>`;
+
+    return `<div class="idea-card">
+      ${idea.photo_url ? `<img class="card-photo" src="${esc(idea.photo_url)}" alt="" onerror="this.style.display='none'">` : ''}
+      <div class="card-body">
+        <div class="card-category ${idea.category === 'aulani' ? 'aulani' : ''}">${cat.emoji} ${cat.label}</div>
+        <div class="card-title">${esc(idea.title)}</div>
+        ${idea.description ? `<div class="card-desc">${idea.description}</div>` : ''}
+        <div class="card-meta">
+          <span>by ${esc(idea.added_by)}</span>
+          ${idea.location ? `<span>· 📍 ${esc(idea.location)}</span>` : ''}
+        </div>
+        ${links ? `<div class="card-links">${links}</div>` : ''}
+        <div class="card-footer">
+          <button class="vote-btn ${voted ? 'voted' : ''}" onclick="toggleVote('${idea.id}')">
+            ${voted ? '⭐' : '☆'} ${idea.upvotes || 0}
+          </button>
+          <div class="card-actions">
+            <button onclick="editIdea('${idea.id}')" title="Edit">✏️</button>
+            <button onclick="deleteIdea('${idea.id}')" title="Delete">🗑️</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setFilter(f) { currentFilter = f; renderBoard(); }
+function setSort(s) { currentSort = s; renderBoard(); }
+
+// ===== VOTE =====
+async function toggleVote(id) {
+  const idea = ideas.find(i => i.id === id);
+  if (!idea) return;
+  const voters = idea.upvoted_by || [];
+  const hasVoted = voters.includes(currentUser);
+  const newVoters = hasVoted ? voters.filter(v => v !== currentUser) : [...voters, currentUser];
+  try {
+    await supaFetch('ideas', 'PATCH', { upvotes: newVoters.length, upvoted_by: newVoters }, `?id=eq.${id}`);
+    idea.upvotes = newVoters.length;
+    idea.upvoted_by = newVoters;
+    renderBoard();
+    toast(hasVoted ? 'Vote removed' : 'Voted! ⭐');
+  } catch (err) {
+    toast('Vote failed: ' + err.message, true);
+  }
+}
+
+// ===== MODAL =====
+function openModal(ideaId) {
+  editingId = ideaId || null;
+  const overlay = document.getElementById('modalOverlay');
+  document.getElementById('modalTitle').textContent = editingId ? 'Edit Idea' : 'Add an Idea';
+  document.getElementById('submitBtn').textContent = editingId ? 'Save Changes' : 'Add Idea';
+
+  if (editingId) {
+    const idea = ideas.find(i => i.id === editingId);
+    if (idea) {
+      document.getElementById('formTitle').value = idea.title || '';
+      document.getElementById('formDesc').value = idea.description || '';
+      document.getElementById('formCategory').value = idea.category || 'other';
+      document.getElementById('formLocation').value = idea.location || '';
+      document.getElementById('formMaps').value = idea.maps_link || '';
+      document.getElementById('formYelp').value = idea.yelp_link || '';
+      document.getElementById('formInfo').value = idea.info_link || '';
+      document.getElementById('formPhoto').value = idea.photo_url || '';
+    }
+  } else {
+    document.querySelectorAll('.modal input, .modal textarea').forEach(el => el.value = '');
+    document.getElementById('formCategory').value = 'food';
+  }
+  document.getElementById('photoPreview').style.display = 'none';
+  overlay.classList.add('open');
+  // Prevent body scroll on mobile
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modalOverlay')) return;
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  editingId = null;
+}
+
+function editIdea(id) { openModal(id); }
+
+// ===== SUBMIT IDEA =====
+async function submitIdea() {
+  const title = document.getElementById('formTitle').value.trim();
+  const category = document.getElementById('formCategory').value;
+  if (!title) return toast('Title is required', true);
+
+  const data = {
+    title,
+    description: document.getElementById('formDesc').value.trim() || null,
+    category,
+    location: document.getElementById('formLocation').value.trim() || null,
+    maps_link: document.getElementById('formMaps').value.trim() || null,
+    yelp_link: document.getElementById('formYelp').value.trim() || null,
+    info_link: document.getElementById('formInfo').value.trim() || null,
+    photo_url: document.getElementById('formPhoto').value.trim() || null,
+    added_by: currentUser
+  };
+
+  try {
+    if (editingId) {
+      await supaFetch('ideas', 'PATCH', data, `?id=eq.${editingId}`);
+      toast('Idea updated! ✨');
+    } else {
+      data.upvotes = 0;
+      data.upvoted_by = [];
+      await supaFetch('ideas', 'POST', data);
+      toast('Idea added! 🌺');
+    }
+    closeModal();
+    await loadIdeas();
+  } catch (err) {
+    toast('Error: ' + err.message, true);
+  }
+}
+
+// ===== DELETE IDEA =====
+async function deleteIdea(id) {
+  if (!confirm('Delete this idea?')) return;
+  try {
+    await supaFetch('ideas', 'DELETE', null, `?id=eq.${id}`);
+    toast('Idea deleted');
+    await loadIdeas();
+  } catch (err) {
+    toast('Delete failed: ' + err.message, true);
+  }
+}
+
+// ===== SEARCH HELPERS =====
+function searchMaps() {
+  const title = document.getElementById('formTitle').value.trim();
+  const loc = document.getElementById('formLocation').value.trim() || 'Oahu HI';
+  window.open(`https://www.google.com/maps/search/${encodeURIComponent(title + ' ' + loc)}`, '_blank');
+}
+function searchYelp() {
+  const title = document.getElementById('formTitle').value.trim();
+  const loc = document.getElementById('formLocation').value.trim() || 'Oahu HI';
+  window.open(`https://www.yelp.com/search?find_desc=${encodeURIComponent(title)}&find_loc=${encodeURIComponent(loc)}`, '_blank');
+}
+
+// ===== PHOTO UPLOAD =====
+async function uploadPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) return toast('Max 5MB', true);
+
+  toast('Uploading...');
+  const fileName = Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+  try {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/photos/${fileName}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': file.type
+      },
+      body: file
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const url = `${SUPABASE_URL}/storage/v1/object/public/photos/${fileName}`;
+    document.getElementById('formPhoto').value = url;
+    const preview = document.getElementById('photoPreview');
+    preview.querySelector('img').src = url;
+    preview.style.display = 'block';
+    toast('Photo uploaded! 📷');
+  } catch (err) {
+    toast('Upload failed: ' + err.message, true);
+  }
+  input.value = '';
+}
+
+// Photo URL preview
+document.getElementById('formPhoto').addEventListener('change', function() {
+  const url = this.value.trim();
+  const preview = document.getElementById('photoPreview');
+  if (url) {
+    preview.querySelector('img').src = url;
+    preview.style.display = 'block';
+  } else {
+    preview.style.display = 'none';
+  }
+});
+
+// ===== POLL =====
+const DEFAULT_POLL = [
+  { id: 'waikiki', name: 'Waikiki', description: 'Right in the action — restaurants, nightlife, and the iconic beach strip', color: '#d4763c', votes: [] },
+  { id: 'turtle-bay', name: 'Turtle Bay (North Shore)', description: 'Secluded resort vibes, away from crowds, gorgeous coastline', color: '#2a7b7b', votes: [] },
+  { id: 'ko-olina', name: 'Ko Olina', description: 'Stay near Aulani, calm lagoons, resort area on the west side', color: '#6b4c8a', votes: [] },
+  { id: 'kailua', name: 'Kailua', description: 'Charming town with a stunning beach, local feel, less touristy', color: '#1a5f7a', votes: [] },
+];
+
+async function loadPoll() {
+  try {
+    pollData = await supaFetch('poll', 'GET', null, '?order=created_at.asc');
+    if (!pollData || pollData.length === 0) {
+      // Seed default options
+      for (const opt of DEFAULT_POLL) {
+        await supaFetch('poll', 'POST', opt);
+      }
+      pollData = DEFAULT_POLL;
+    }
+    if (currentPage === 'poll') renderPoll();
+  } catch (err) {
+    toast('Poll load failed: ' + err.message, true);
+  }
+}
+
+function renderPoll() {
+  const container = document.getElementById('pollOptions');
+  const totalVotes = pollData.reduce((s, o) => s + (o.votes || []).length, 0);
+
+  container.innerHTML = pollData.map(opt => {
+    const votes = opt.votes || [];
+    const count = votes.length;
+    const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+    const selected = votes.includes(currentUser);
+    return `<div class="poll-option ${selected ? 'selected' : ''}" onclick="votePoll('${opt.id}')">
+      <div class="bar-bg" style="transform:scaleX(${pct / 100})"></div>
+      <div class="poll-content">
+        <div class="poll-name">${esc(opt.name)}</div>
+        ${opt.description ? `<div class="poll-desc">${esc(opt.description)}</div>` : ''}
+        <div class="poll-stats">
+          <span>${count} vote${count !== 1 ? 's' : ''}</span>
+          <span>${pct}%</span>
+        </div>
+        ${votes.length > 0 ? `<div class="poll-voters">${votes.map(esc).join(', ')}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function votePoll(optionId) {
+  try {
+    // Remove vote from all other options
+    for (const opt of pollData) {
+      if (opt.id === optionId) continue;
+      if ((opt.votes || []).includes(currentUser)) {
+        opt.votes = opt.votes.filter(v => v !== currentUser);
+        await supaFetch('poll', 'PATCH', { votes: opt.votes }, `?id=eq.${opt.id}`);
+      }
+    }
+    // Toggle vote on selected
+    const target = pollData.find(o => o.id === optionId);
+    if (!target) return;
+    if ((target.votes || []).includes(currentUser)) {
+      target.votes = target.votes.filter(v => v !== currentUser);
+      await supaFetch('poll', 'PATCH', { votes: target.votes }, `?id=eq.${optionId}`);
+      toast('Vote removed');
+    } else {
+      target.votes = [...(target.votes || []), currentUser];
+      await supaFetch('poll', 'PATCH', { votes: target.votes }, `?id=eq.${optionId}`);
+      toast('Vote cast! 🗳️');
+    }
+    renderPoll();
+  } catch (err) {
+    toast('Vote failed: ' + err.message, true);
+  }
+}
+
+async function addPollOption() {
+  const input = document.getElementById('pollNewOption');
+  const name = input.value.trim();
+  if (!name) return;
+  const id = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  try {
+    const newOpt = { id, name, description: '', color: '#7a7a7a', votes: [] };
+    await supaFetch('poll', 'POST', newOpt);
+    pollData.push(newOpt);
+    input.value = '';
+    renderPoll();
+    toast('Option added! 🌴');
+  } catch (err) {
+    toast('Failed: ' + err.message, true);
+  }
+}
+
+// ===== ITINERARY =====
+async function loadItinerary() {
+  try {
+    const rows = await supaFetch('itinerary', 'GET', null, `?id=eq.main`);
+    if (rows && rows.length > 0) {
+      itineraryData = rows[0].days || {};
+    } else {
+      itineraryData = {};
+      await supaFetch('itinerary', 'POST', { id: 'main', days: {} });
+    }
+    if (currentPage === 'itinerary') renderItinerary();
+  } catch (err) {
+    toast('Itinerary load failed: ' + err.message, true);
+  }
+}
+
+async function saveItinerary() {
+  try {
+    await supaFetch('itinerary', 'PATCH', { days: itineraryData }, '?id=eq.main');
+  } catch (err) {
+    toast('Save failed: ' + err.message, true);
+  }
+}
+
+function renderItinerary() {
+  const daysContainer = document.getElementById('itinDays');
+  daysContainer.innerHTML = TRIP_DAYS.map(day => {
+    const dayIds = itineraryData[day.key] || [];
+    const chips = dayIds.map((ideaId, idx) => {
+      const idea = ideas.find(i => i.id === ideaId);
+      const title = idea ? idea.title : '(Unknown)';
+      const cat = idea ? CATEGORIES[idea.category] : null;
+      return `<div class="itin-chip" draggable="true" ondragstart="dragChip(event,'${day.key}',${idx})">
+        <span>${cat ? cat.emoji + ' ' : ''}${esc(title)}</span>
+        <button class="chip-remove" onclick="removeFromDay('${day.key}',${idx})">✕</button>
+      </div>`;
+    }).join('');
+    return `<div class="itin-day" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="dropOnDay(event,'${day.key}');this.classList.remove('drag-over')">
+      <div class="day-title">${day.label}<small>${day.day}</small></div>
+      ${chips || '<div style="font-size:0.72rem;color:var(--text-light);text-align:center;padding:8px;">Drop ideas here</div>'}
+    </div>`;
+  }).join('');
+
+  // Unassigned pool — show ALL ideas (can add same idea multiple times)
+  const pool = document.getElementById('unassignedPool');
+  pool.innerHTML = ideas.map(idea => {
+    const cat = CATEGORIES[idea.category] || CATEGORIES.other;
+    return `<div class="pool-chip" draggable="true" ondragstart="dragPool(event,'${idea.id}')">${cat.emoji} ${esc(idea.title)}</div>`;
+  }).join('');
+}
+
+let dragSource = null;
+
+function dragChip(e, dayKey, idx) {
+  dragSource = { type: 'chip', dayKey, idx };
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function dragPool(e, ideaId) {
+  dragSource = { type: 'pool', ideaId };
+  e.dataTransfer.effectAllowed = 'copy';
+}
+
+function dropOnDay(e, targetDay) {
+  e.preventDefault();
+  if (!dragSource) return;
+
+  if (dragSource.type === 'pool') {
+    // Copy from pool
+    if (!itineraryData[targetDay]) itineraryData[targetDay] = [];
+    itineraryData[targetDay].push(dragSource.ideaId);
+  } else if (dragSource.type === 'chip') {
+    // Move from another day
+    const srcArr = itineraryData[dragSource.dayKey] || [];
+    const ideaId = srcArr[dragSource.idx];
+    srcArr.splice(dragSource.idx, 1);
+    itineraryData[dragSource.dayKey] = srcArr;
+    if (!itineraryData[targetDay]) itineraryData[targetDay] = [];
+    itineraryData[targetDay].push(ideaId);
+  }
+
+  dragSource = null;
+  saveItinerary();
+  renderItinerary();
+}
+
+function removeFromDay(dayKey, idx) {
+  const arr = itineraryData[dayKey] || [];
+  arr.splice(idx, 1);
+  itineraryData[dayKey] = arr;
+  saveItinerary();
+  renderItinerary();
+}
+
+// ===== MAP =====
+function renderMap() {
+  const withLinks = ideas.filter(i => i.maps_link);
+  const mapCards = document.getElementById('mapCards');
+  const mapEmbed = document.getElementById('mapEmbed');
+
+  if (withLinks.length === 0) {
+    mapEmbed.style.display = 'none';
+    mapCards.innerHTML = '<div class="empty-state"><div class="emoji">🗺️</div><p>No locations with Google Maps links yet</p></div>';
+    return;
+  }
+
+  // Extract coords from maps links
+  const markers = [];
+  withLinks.forEach(idea => {
+    const coords = extractCoords(idea.maps_link);
+    if (coords) markers.push({ ...coords, idea });
+  });
+
+  if (markers.length > 0) {
+    const lat = markers.reduce((s, m) => s + m.lat, 0) / markers.length;
+    const lng = markers.reduce((s, m) => s + m.lng, 0) / markers.length;
+    mapEmbed.style.display = 'block';
+    mapEmbed.src = `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.15},${lat - 0.1},${lng + 0.15},${lat + 0.1}&layer=mapnik&marker=${lat},${lng}`;
+  } else {
+    mapEmbed.style.display = 'block';
+    mapEmbed.src = 'https://www.openstreetmap.org/export/embed.html?bbox=-158.3,21.2,-157.6,21.8&layer=mapnik';
+  }
+
+  mapCards.innerHTML = withLinks.map(idea => {
+    const cat = CATEGORIES[idea.category] || CATEGORIES.other;
+    return `<div class="map-card">
+      <div class="mc-title">${esc(idea.title)}</div>
+      <div class="mc-cat">${cat.emoji} ${cat.label}</div>
+      <a href="${esc(idea.maps_link)}" target="_blank" rel="noopener">Open in Maps →</a>
+    </div>`;
+  }).join('');
+}
+
+function extractCoords(url) {
+  if (!url) return null;
+  let m = url.match(/@(-?[\d.]+),(-?[\d.]+)/);
+  if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+  m = url.match(/[?&]q=(-?[\d.]+),(-?[\d.]+)/);
+  if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+  return null;
+}
+
+// ===== SPLIT THE BILL =====
+async function loadReceipts() {
+  try {
+    receipts = await supaFetch('receipts', 'GET', null, '?order=created_at.desc');
+    if (!receipts) receipts = [];
+    renderReceiptList();
+  } catch (err) {
+    receipts = [];
+    renderReceiptList();
+  }
+}
+
+function showReceiptList() {
+  document.getElementById('splitListView').classList.remove('hidden');
+  document.getElementById('splitNewView').classList.add('hidden');
+  document.getElementById('splitDetailView').classList.add('hidden');
+}
+
+function showNewReceipt() {
+  document.getElementById('splitListView').classList.add('hidden');
+  document.getElementById('splitNewView').classList.remove('hidden');
+  document.getElementById('splitDetailView').classList.add('hidden');
+  document.getElementById('receiptName').value = '';
+  document.getElementById('receiptPayer').value = currentUser;
+  document.getElementById('receiptTax').value = '0';
+  document.getElementById('receiptTip').value = '0';
+  document.getElementById('receiptPreview').style.display = 'none';
+  document.getElementById('receiptProcessing').classList.add('hidden');
+  tempLineItems = [{ name: '', price: '' }];
+  renderLineItemsForm();
+}
+
+function cancelNewReceipt() {
+  showReceiptList();
+}
+
+function renderReceiptList() {
+  const list = document.getElementById('receiptList');
+  if (!receipts || receipts.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="emoji">🧾</div><p>No receipts yet — add one after your next meal!</p></div>';
+    return;
+  }
+  list.innerHTML = receipts.map(r => {
+    const data = r.data || {};
+    const items = data.items || [];
+    const tax = parseFloat(data.tax) || 0;
+    const tip = parseFloat(data.tip) || 0;
+    const subtotal = items.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
+    const total = subtotal + tax + tip;
+    const payments = data.payments || {};
+    const claimers = new Set();
+    items.forEach(i => (i.claims || []).forEach(c => claimers.add(c)));
+
+    const paidCount = Object.values(payments).filter(v => v).length;
+    const totalPeople = claimers.size;
+    const payerName = data.payer || 'Unknown';
+
+    return `<div class="receipt-card" onclick="viewReceipt('${r.id}')">
+      <div class="rc-header">
+        <span class="rc-title">${esc(r.name)}</span>
+        <span class="rc-total">$${total.toFixed(2)}</span>
+      </div>
+      <div class="rc-meta">Paid by ${esc(payerName)} · ${items.length} items · ${totalPeople} people</div>
+      <div class="rc-status">
+        ${paidCount > 0 ? `<span class="rc-badge paid">✓ ${paidCount} paid</span>` : ''}
+        ${totalPeople - paidCount > 0 ? `<span class="rc-badge unpaid">${totalPeople - paidCount} unpaid</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Manual line items form
+function renderLineItemsForm() {
+  const form = document.getElementById('lineItemsForm');
+  form.innerHTML = tempLineItems.map((item, i) => `
+    <div class="manual-form mf-row">
+      <input type="text" placeholder="Item name" value="${esc(item.name)}" onchange="tempLineItems[${i}].name=this.value">
+      <input type="number" step="0.01" min="0" placeholder="$0.00" value="${item.price}" onchange="tempLineItems[${i}].price=this.value">
+      <button class="mf-remove" onclick="tempLineItems.splice(${i},1);renderLineItemsForm()">✕</button>
+    </div>
+  `).join('');
+}
+
+function addManualLineItem() {
+  tempLineItems.push({ name: '', price: '' });
+  renderLineItemsForm();
+}
+
+// Receipt photo upload
+async function handleReceiptUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  await processReceiptImage(file);
+  input.value = '';
+}
+
+function handleReceiptDrop(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-hover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    processReceiptImage(file);
+  }
+}
+
+async function processReceiptImage(file) {
+  // Show preview
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    const base64Full = e.target.result;
+    const base64Data = base64Full.split(',')[1];
+    const mediaType = file.type || 'image/jpeg';
+
+    document.getElementById('receiptPreviewImg').src = base64Full;
+    document.getElementById('receiptPreview').style.display = 'block';
+    document.getElementById('receiptProcessing').classList.remove('hidden');
+
+    try {
+      const response = await fetch('/.netlify/functions/scan-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_base64: base64Data,
+          media_type: mediaType
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Scan failed');
+      }
+
+      const parsed = await response.json();
+
+      // Populate form
+      tempLineItems = (parsed.items || []).map(i => ({
+        name: i.name || '',
+        price: parseFloat(i.price) || 0
+      }));
+      if (tempLineItems.length === 0) tempLineItems = [{ name: '', price: '' }];
+
+      if (parsed.tax) document.getElementById('receiptTax').value = parseFloat(parsed.tax) || 0;
+      if (parsed.tip) document.getElementById('receiptTip').value = parseFloat(parsed.tip) || 0;
+      if (parsed.restaurant && !document.getElementById('receiptName').value) {
+        document.getElementById('receiptName').value = parsed.restaurant;
+      }
+
+      renderLineItemsForm();
+      toast('Receipt read! Check the items below 🧾');
+    } catch (err) {
+      toast('Could not read receipt — enter items manually', true);
+      console.error('Receipt parse error:', err);
+    }
+    document.getElementById('receiptProcessing').classList.add('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+
+// Save receipt to Supabase
+async function saveReceipt() {
+  const name = document.getElementById('receiptName').value.trim();
+  const payer = document.getElementById('receiptPayer').value.trim();
+  if (!name) return toast('Give this receipt a name', true);
+  if (!payer) return toast('Who paid?', true);
+
+  const items = tempLineItems
+    .filter(i => i.name && i.price)
+    .map(i => ({ name: i.name.trim(), price: parseFloat(i.price) || 0, claims: [] }));
+
+  if (items.length === 0) return toast('Add at least one item', true);
+
+  const receiptData = {
+    name,
+    data: {
+      payer,
+      items,
+      tax: parseFloat(document.getElementById('receiptTax').value) || 0,
+      tip: parseFloat(document.getElementById('receiptTip').value) || 0,
+      payments: {}
+    }
+  };
+
+  try {
+    await supaFetch('receipts', 'POST', receiptData);
+    toast('Receipt saved! 🧾');
+    await loadReceipts();
+    showReceiptList();
+  } catch (err) {
+    toast('Save failed: ' + err.message, true);
+  }
+}
+
+// View receipt detail
+function viewReceipt(id) {
+  const receipt = receipts.find(r => r.id === id);
+  if (!receipt) return;
+  document.getElementById('splitListView').classList.add('hidden');
+  document.getElementById('splitNewView').classList.add('hidden');
+  document.getElementById('splitDetailView').classList.remove('hidden');
+  renderReceiptDetail(receipt);
+}
+
+function renderReceiptDetail(receipt) {
+  const container = document.getElementById('receiptDetail');
+  const data = receipt.data || {};
+  const items = data.items || [];
+  const tax = parseFloat(data.tax) || 0;
+  const tip = parseFloat(data.tip) || 0;
+  const payer = data.payer || 'Unknown';
+  const payments = data.payments || {};
+  const subtotal = items.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
+  const total = subtotal + tax + tip;
+
+  // Calculate who owes what
+  const claimers = new Set();
+  items.forEach(i => (i.claims || []).forEach(c => claimers.add(c)));
+  const numClaimers = claimers.size || 1;
+  const taxPerPerson = tax / numClaimers;
+  const tipPerPerson = tip / numClaimers;
+
+  const owes = {};
+  claimers.forEach(name => { owes[name] = 0; });
+  items.forEach(item => {
+    const claims = item.claims || [];
+    if (claims.length > 0) {
+      const split = (parseFloat(item.price) || 0) / claims.length;
+      claims.forEach(name => { owes[name] = (owes[name] || 0) + split; });
+    }
+  });
+  // Add tax + tip share
+  Object.keys(owes).forEach(name => {
+    owes[name] += taxPerPerson + tipPerPerson;
+  });
+
+  let html = `
+    <button class="receipt-back" onclick="showReceiptList()">← Back to receipts</button>
+    <h3>${esc(receipt.name)}</h3>
+    <div class="rd-meta">Paid by <strong>${esc(payer)}</strong></div>
+
+    <div class="line-items">
+      ${items.map((item, i) => {
+        const isClaimed = (item.claims || []).includes(currentUser);
+        return `<div class="line-item">
+          <span class="li-name">${esc(item.name)}</span>
+          <span class="li-price">$${(parseFloat(item.price) || 0).toFixed(2)}</span>
+          <div class="li-claims">
+            ${(item.claims || []).map(c => `<span class="claim-chip">${esc(c)}</span>`).join('')}
+            <button class="claim-btn ${isClaimed ? 'claimed' : ''}" onclick="toggleClaim('${receipt.id}',${i})">
+              ${isClaimed ? '✓ Mine' : '+ Mine'}
+            </button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="extras-row"><span>Subtotal</span><span>$${subtotal.toFixed(2)}</span></div>
+    <div class="extras-row"><span>Tax</span><span>$${tax.toFixed(2)}</span></div>
+    <div class="extras-row"><span>Tip</span><span>$${tip.toFixed(2)}</span></div>
+    <div class="extras-row total-row"><span>Total</span><span>$${total.toFixed(2)}</span></div>
+
+    <div class="owes-section">
+      <h4>💸 Who Owes What</h4>
+      ${Object.entries(owes).map(([name, amount]) => {
+        const isPayer = name === payer;
+        const isPaid = payments[name] === true;
+        return `<div class="owe-row ${isPayer ? 'is-payer' : ''}">
+          <span class="owe-name">${esc(name)} ${isPayer ? '(paid the bill)' : ''}</span>
+          <span class="owe-amount ${isPayer ? '' : amount === 0 ? 'zero' : ''}">
+            ${isPayer ? 'Covered $' + total.toFixed(2) : '$' + amount.toFixed(2)}
+          </span>
+          ${!isPayer ? `<button class="paid-toggle ${isPaid ? 'paid' : 'unpaid'}" onclick="togglePaid('${receipt.id}','${esc(name)}')">
+            ${isPaid ? '✓ Paid' : 'Mark Paid'}
+          </button>` : ''}
+        </div>`;
+      }).join('')}
+      ${Object.keys(owes).length === 0 ? '<p style="font-size:0.85rem;color:var(--text-light);padding:8px 0;">Nobody has claimed items yet — tap "+ Mine" on the items you ordered.</p>' : ''}
+    </div>
+
+    <button onclick="deleteReceipt('${receipt.id}')" style="margin-top:20px;padding:10px;width:100%;background:none;border:2px solid #dc3545;color:#dc3545;border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;font-size:0.85rem;">Delete Receipt</button>
+  `;
+  container.innerHTML = html;
+}
+
+// Toggle claim on a line item
+async function toggleClaim(receiptId, itemIndex) {
+  const receipt = receipts.find(r => r.id === receiptId);
+  if (!receipt) return;
+  const item = receipt.data.items[itemIndex];
+  if (!item.claims) item.claims = [];
+
+  if (item.claims.includes(currentUser)) {
+    item.claims = item.claims.filter(c => c !== currentUser);
+  } else {
+    item.claims.push(currentUser);
+  }
+
+  try {
+    await supaFetch('receipts', 'PATCH', { data: receipt.data }, `?id=eq.${receiptId}`);
+    renderReceiptDetail(receipt);
+  } catch (err) {
+    toast('Failed to update: ' + err.message, true);
+  }
+}
+
+// Toggle payment status
+async function togglePaid(receiptId, name) {
+  const receipt = receipts.find(r => r.id === receiptId);
+  if (!receipt) return;
+  if (!receipt.data.payments) receipt.data.payments = {};
+  receipt.data.payments[name] = !receipt.data.payments[name];
+
+  try {
+    await supaFetch('receipts', 'PATCH', { data: receipt.data }, `?id=eq.${receiptId}`);
+    renderReceiptDetail(receipt);
+    toast(receipt.data.payments[name] ? '✓ Marked as paid' : 'Marked as unpaid');
+  } catch (err) {
+    toast('Failed: ' + err.message, true);
+  }
+}
+
+// Delete receipt
+async function deleteReceipt(id) {
+  if (!confirm('Delete this receipt?')) return;
+  try {
+    await supaFetch('receipts', 'DELETE', null, `?id=eq.${id}`);
+    toast('Receipt deleted');
+    await loadReceipts();
+    showReceiptList();
+  } catch (err) {
+    toast('Delete failed: ' + err.message, true);
+  }
+}
+
+// ===== UTILITIES =====
+function esc(str) {
+  if (!str) return '';
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+</script>
+</body>
+</html>
