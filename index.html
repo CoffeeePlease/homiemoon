@@ -707,108 +707,6 @@ body::before {
   .modal .search-btn { width: 100%; text-align: center; }
 }
 
-/* ===== POLL PAGE ===== */
-.poll-section {
-  background: white;
-  border-radius: var(--radius-xl);
-  padding: 28px 24px;
-  box-shadow: var(--shadow-md);
-}
-.poll-section h2 {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.5rem;
-  color: var(--mahogany);
-  margin-bottom: 4px;
-}
-.poll-section .poll-sub {
-  font-size: 0.85rem;
-  color: var(--text-light);
-  margin-bottom: 20px;
-}
-.poll-option {
-  border: 2px solid var(--sand-dark);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  margin-bottom: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-  position: relative;
-  overflow: hidden;
-}
-.poll-option:hover { border-color: var(--gold); }
-.poll-option.selected {
-  border-color: var(--gold);
-  background: var(--sand-light);
-}
-.poll-option .bar-bg {
-  position: absolute;
-  inset: 0;
-  background: var(--gold);
-  opacity: 0.08;
-  transform-origin: left;
-  transition: transform 0.4s ease;
-}
-.poll-option .poll-content {
-  position: relative;
-  z-index: 1;
-}
-.poll-option .poll-name {
-  font-weight: 700;
-  font-size: 1rem;
-  color: var(--mahogany);
-}
-.poll-option .poll-desc {
-  font-size: 0.82rem;
-  color: var(--text-medium);
-  margin-top: 3px;
-}
-.poll-option .poll-stats {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 8px;
-  font-size: 0.78rem;
-  color: var(--text-light);
-}
-.poll-option .poll-voters {
-  font-size: 0.72rem;
-  color: var(--text-light);
-  margin-top: 4px;
-}
-.poll-add {
-  margin-top: 16px;
-  display: flex;
-  gap: 8px;
-}
-.poll-add input {
-  flex: 1;
-  padding: 10px 14px;
-  border: 2px solid var(--sand-dark);
-  border-radius: var(--radius-md);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.9rem;
-  outline: none;
-}
-.poll-add input:focus { border-color: var(--gold); }
-.poll-add button {
-  padding: 10px 18px;
-  background: var(--gold);
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  font-family: 'DM Sans', sans-serif;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-}
-@media (max-width: 640px) {
-  .poll-section { padding: 20px 14px; border-radius: var(--radius-lg); }
-  .poll-section h2 { font-size: 1.25rem; }
-  .poll-option { padding: 12px; }
-  .poll-add { flex-direction: column; }
-  .poll-add button { width: 100%; text-align: center; padding: 12px; }
-}
-
 /* ===== ITINERARY PAGE ===== */
 .itinerary-section {
   background: white;
@@ -1599,7 +1497,6 @@ body::before {
     <nav class="header-nav" id="navBar">
       <button class="nav-btn active" data-page="home">Home</button>
       <button class="nav-btn" data-page="board">Board</button>
-      <button class="nav-btn" data-page="poll">Poll</button>
       <button class="nav-btn" data-page="itinerary">Itinerary</button>
       <button class="nav-btn" data-page="map">Map</button>
       <button class="nav-btn" data-page="split">Split</button>
@@ -1636,19 +1533,6 @@ body::before {
     </div>
     <div class="board-controls" id="filterBar"></div>
     <div class="ideas-grid" id="ideasGrid"></div>
-  </div>
-
-  <!-- POLL PAGE -->
-  <div id="page-poll" class="hidden">
-    <div class="poll-section">
-      <h2>🗳️ Where Are We Staying?</h2>
-      <p class="poll-sub">Vote for your pick, or add a new option</p>
-      <div id="pollOptions"></div>
-      <div class="poll-add">
-        <input type="text" id="pollNewOption" placeholder="Suggest another spot...">
-        <button onclick="addPollOption()">Add Option</button>
-      </div>
-    </div>
   </div>
 
   <!-- ITINERARY PAGE -->
@@ -1931,7 +1815,6 @@ const headers = {
 // ===== STATE =====
 let currentUser = '';
 let ideas = [];
-let pollData = [];
 let itineraryData = {};
 let currentPage = 'home';
 let currentFilter = 'all';
@@ -2003,7 +1886,6 @@ function enterApp() {
   document.getElementById('fabBtn').classList.remove('hidden');
   document.getElementById('userAvatar').textContent = name[0].toUpperCase();
   loadIdeas();
-  loadPoll();
   loadItinerary();
 }
 
@@ -2022,7 +1904,7 @@ document.getElementById('navBar').addEventListener('click', e => {
 function navigateTo(page) {
   currentPage = page;
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.page === page));
-  ['home', 'board', 'poll', 'itinerary', 'map', 'split', 'travel', 'reservations'].forEach(p => {
+  ['home', 'board', 'itinerary', 'map', 'split', 'travel', 'reservations'].forEach(p => {
     document.getElementById('page-' + p).classList.toggle('hidden', p !== page);
   });
   // Show FAB only on board
@@ -2030,7 +1912,6 @@ function navigateTo(page) {
   // Refresh page data
   if (page === 'home') renderHome();
   if (page === 'board') renderBoard();
-  if (page === 'poll') renderPoll();
   if (page === 'itinerary') renderItinerary();
   if (page === 'map') renderMap();
   if (page === 'split') { loadReceipts(); showReceiptList(); }
@@ -2308,99 +2189,6 @@ document.getElementById('formPhoto').addEventListener('change', function() {
     preview.style.display = 'none';
   }
 });
-
-// ===== POLL =====
-const DEFAULT_POLL = [
-  { id: 'waikiki', name: 'Waikiki', description: 'Right in the action — restaurants, nightlife, and the iconic beach strip', color: '#d4763c', votes: [] },
-  { id: 'turtle-bay', name: 'Turtle Bay (North Shore)', description: 'Secluded resort vibes, away from crowds, gorgeous coastline', color: '#2a7b7b', votes: [] },
-  { id: 'ko-olina', name: 'Ko Olina', description: 'Stay near Aulani, calm lagoons, resort area on the west side', color: '#6b4c8a', votes: [] },
-  { id: 'kailua', name: 'Kailua', description: 'Charming town with a stunning beach, local feel, less touristy', color: '#1a5f7a', votes: [] },
-];
-
-async function loadPoll() {
-  try {
-    pollData = await supaFetch('poll', 'GET', null, '?order=created_at.asc');
-    if (!pollData || pollData.length === 0) {
-      // Seed default options
-      for (const opt of DEFAULT_POLL) {
-        await supaFetch('poll', 'POST', opt);
-      }
-      pollData = DEFAULT_POLL;
-    }
-    if (currentPage === 'poll') renderPoll();
-  } catch (err) {
-    toast('Poll load failed: ' + err.message, true);
-  }
-}
-
-function renderPoll() {
-  const container = document.getElementById('pollOptions');
-  const totalVotes = pollData.reduce((s, o) => s + (o.votes || []).length, 0);
-
-  container.innerHTML = pollData.map(opt => {
-    const votes = opt.votes || [];
-    const count = votes.length;
-    const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-    const selected = votes.includes(currentUser);
-    return `<div class="poll-option ${selected ? 'selected' : ''}" onclick="votePoll('${opt.id}')">
-      <div class="bar-bg" style="transform:scaleX(${pct / 100})"></div>
-      <div class="poll-content">
-        <div class="poll-name">${esc(opt.name)}</div>
-        ${opt.description ? `<div class="poll-desc">${esc(opt.description)}</div>` : ''}
-        <div class="poll-stats">
-          <span>${count} vote${count !== 1 ? 's' : ''}</span>
-          <span>${pct}%</span>
-        </div>
-        ${votes.length > 0 ? `<div class="poll-voters">${votes.map(esc).join(', ')}</div>` : ''}
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function votePoll(optionId) {
-  try {
-    // Remove vote from all other options
-    for (const opt of pollData) {
-      if (opt.id === optionId) continue;
-      if ((opt.votes || []).includes(currentUser)) {
-        opt.votes = opt.votes.filter(v => v !== currentUser);
-        await supaFetch('poll', 'PATCH', { votes: opt.votes }, `?id=eq.${opt.id}`);
-      }
-    }
-    // Toggle vote on selected
-    const target = pollData.find(o => o.id === optionId);
-    if (!target) return;
-    if ((target.votes || []).includes(currentUser)) {
-      target.votes = target.votes.filter(v => v !== currentUser);
-      await supaFetch('poll', 'PATCH', { votes: target.votes }, `?id=eq.${optionId}`);
-      toast('Vote removed');
-    } else {
-      target.votes = [...(target.votes || []), currentUser];
-      await supaFetch('poll', 'PATCH', { votes: target.votes }, `?id=eq.${optionId}`);
-      toast('Vote cast! 🗳️');
-    }
-    renderPoll();
-  } catch (err) {
-    toast('Vote failed: ' + err.message, true);
-  }
-}
-
-async function addPollOption() {
-  const input = document.getElementById('pollNewOption');
-  const name = input.value.trim();
-  if (!name) return;
-  const id = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-  try {
-    const newOpt = { id, name, description: '', color: '#7a7a7a', votes: [] };
-    await supaFetch('poll', 'POST', newOpt);
-    pollData.push(newOpt);
-    input.value = '';
-    renderPoll();
-    toast('Option added! 🌴');
-  } catch (err) {
-    toast('Failed: ' + err.message, true);
-  }
-}
 
 // ===== ITINERARY =====
 async function loadItinerary() {
