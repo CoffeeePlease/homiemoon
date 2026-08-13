@@ -774,6 +774,7 @@ body::before {
   word-break: break-word;
 }
 .itin-chip:active { cursor: grabbing; }
+.itin-chip.drag-over-chip { border-top: 2px solid var(--teal); margin-top: -2px; }
 .itin-chip .chip-remove {
   background: none;
   border: none;
@@ -2315,24 +2316,18 @@ function renderItinerary() {
   daysContainer.innerHTML = TRIP_DAYS.map(day => {
     const items = itineraryData[day.key] || [];
 
-    // Sort: items with time first (chronologically), then no-time items
-    const sorted = items.map((item, origIdx) => ({ ...item, origIdx }));
-    sorted.sort((a, b) => {
-      if (a.time && b.time) return a.time.localeCompare(b.time);
-      if (a.time && !b.time) return -1;
-      if (!a.time && b.time) return 1;
-      return 0;
-    });
-
-    const chips = sorted.map(item => {
-      const idx = item.origIdx;
+    const chips = items.map((item, idx) => {
       const idea = item.ideaId ? ideas.find(i => i.id === item.ideaId) : null;
       const title = idea ? idea.title : (item.title || 'Untitled');
       const cat = idea ? CATEGORIES[idea.category] : null;
       const timeVal = item.time || '';
       const isManual = !item.ideaId;
 
-      return `<div class="itin-chip" draggable="true" ondragstart="dragChip(event,'${day.key}',${idx})">
+      return `<div class="itin-chip" draggable="true"
+        ondragstart="dragChip(event,'${day.key}',${idx})"
+        ondragover="event.preventDefault();event.stopPropagation();this.classList.add('drag-over-chip')"
+        ondragleave="this.classList.remove('drag-over-chip')"
+        ondrop="event.stopPropagation();this.classList.remove('drag-over-chip');dropOnChip(event,'${day.key}',${idx})">
         <div style="flex:1;min-width:0">
           ${timeVal
             ? `<span class="itin-chip-time">${esc(timeVal)}</span>`
@@ -2345,7 +2340,7 @@ function renderItinerary() {
       </div>`;
     }).join('');
 
-    return `<div class="itin-day" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="dropOnDay(event,'${day.key}');this.classList.remove('drag-over')">
+    return `<div class="itin-day" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="this.classList.remove('drag-over');dropOnDay(event,'${day.key}')">
       <div class="day-title">${day.label}<small>${day.day}</small></div>
       ${chips || '<div style="font-size:0.72rem;color:var(--text-light);text-align:center;padding:8px;">Drop ideas or add below</div>'}
       <div class="itin-add-row">
@@ -2376,21 +2371,50 @@ function dragPool(e, ideaId) {
   e.dataTransfer.effectAllowed = 'copy';
 }
 
+// Drop onto a specific chip — insert at that position (reorder)
+function dropOnChip(e, targetDay, targetIdx) {
+  e.preventDefault();
+  if (!dragSource) return;
+
+  let item;
+  if (dragSource.type === 'pool') {
+    item = { ideaId: dragSource.ideaId, time: '' };
+  } else if (dragSource.type === 'chip') {
+    const srcArr = itineraryData[dragSource.dayKey] || [];
+    item = srcArr[dragSource.idx];
+    srcArr.splice(dragSource.idx, 1);
+    itineraryData[dragSource.dayKey] = srcArr;
+    // Adjust target if moving within same day and source was before target
+    if (dragSource.dayKey === targetDay && dragSource.idx < targetIdx) {
+      targetIdx--;
+    }
+  }
+
+  if (!itineraryData[targetDay]) itineraryData[targetDay] = [];
+  itineraryData[targetDay].splice(targetIdx, 0, item);
+
+  dragSource = null;
+  saveItinerary();
+  renderItinerary();
+}
+
+// Drop on the day column itself — append to end
 function dropOnDay(e, targetDay) {
   e.preventDefault();
   if (!dragSource) return;
 
+  let item;
   if (dragSource.type === 'pool') {
-    if (!itineraryData[targetDay]) itineraryData[targetDay] = [];
-    itineraryData[targetDay].push({ ideaId: dragSource.ideaId, time: '' });
+    item = { ideaId: dragSource.ideaId, time: '' };
   } else if (dragSource.type === 'chip') {
     const srcArr = itineraryData[dragSource.dayKey] || [];
-    const item = srcArr[dragSource.idx];
+    item = srcArr[dragSource.idx];
     srcArr.splice(dragSource.idx, 1);
     itineraryData[dragSource.dayKey] = srcArr;
-    if (!itineraryData[targetDay]) itineraryData[targetDay] = [];
-    itineraryData[targetDay].push(item);
   }
+
+  if (!itineraryData[targetDay]) itineraryData[targetDay] = [];
+  itineraryData[targetDay].push(item);
 
   dragSource = null;
   saveItinerary();
