@@ -778,6 +778,78 @@ body::before {
   padding: 2px;
   flex-shrink: 0;
 }
+.itin-chip-time {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--teal);
+  background: rgba(42,157,143,0.1);
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+}
+.itin-chip-time-input {
+  width: 65px;
+  padding: 2px 4px;
+  font-size: 0.65rem;
+  border-radius: 4px;
+  border: 1px solid var(--sand-dark);
+  background: white;
+  color: var(--text-dark);
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  margin-bottom: 2px;
+}
+.itin-chip-manual {
+  font-size: 0.6rem;
+  color: var(--text-light);
+  font-style: italic;
+}
+.itin-add-row {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--sand-dark);
+}
+.itin-add-input {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 0.72rem;
+  border-radius: 6px;
+  border: 1px solid var(--sand-dark);
+  background: white;
+  color: var(--text-dark);
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  min-width: 0;
+}
+.itin-add-input::placeholder { color: var(--text-light); }
+.itin-add-time {
+  width: 55px;
+  padding: 6px 4px;
+  font-size: 0.72rem;
+  border-radius: 6px;
+  border: 1px solid var(--sand-dark);
+  background: white;
+  color: var(--text-dark);
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  text-align: center;
+}
+.itin-add-time::placeholder { color: var(--text-light); }
+.itin-add-btn {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: none;
+  background: var(--teal);
+  color: white;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-weight: 700;
+  line-height: 1;
+}
+.itin-add-btn:hover { opacity: 0.85; }
 .unassigned-section {
   margin-top: 20px;
   padding-top: 16px;
@@ -1539,7 +1611,7 @@ body::before {
   <div id="page-itinerary" class="hidden">
     <div class="itinerary-section">
       <h2>📅 Trip Itinerary</h2>
-      <p class="itin-sub">Drag ideas into days — same idea can go on multiple days</p>
+      <p class="itin-sub">Drag ideas or type directly into each day · add times to stay organized</p>
       <div class="itin-days" id="itinDays"></div>
       <div class="unassigned-section">
         <h3>All Ideas</h3>
@@ -2195,7 +2267,17 @@ async function loadItinerary() {
   try {
     const rows = await supaFetch('itinerary', 'GET', null, `?id=eq.main`);
     if (rows && rows.length > 0) {
-      itineraryData = rows[0].days || {};
+      const raw = rows[0].days || {};
+      // Migrate old string-only format to new object format
+      const migrated = {};
+      TRIP_DAYS.forEach(d => {
+        const items = raw[d.key] || [];
+        migrated[d.key] = items.map(item => {
+          if (typeof item === 'string') return { ideaId: item, time: '' };
+          return item;
+        });
+      });
+      itineraryData = migrated;
     } else {
       itineraryData = {};
       await supaFetch('itinerary', 'POST', { id: 'main', days: {} });
@@ -2217,23 +2299,50 @@ async function saveItinerary() {
 function renderItinerary() {
   const daysContainer = document.getElementById('itinDays');
   daysContainer.innerHTML = TRIP_DAYS.map(day => {
-    const dayIds = itineraryData[day.key] || [];
-    const chips = dayIds.map((ideaId, idx) => {
-      const idea = ideas.find(i => i.id === ideaId);
-      const title = idea ? idea.title : '(Unknown)';
+    const items = itineraryData[day.key] || [];
+
+    // Sort: items with time first (chronologically), then no-time items
+    const sorted = items.map((item, origIdx) => ({ ...item, origIdx }));
+    sorted.sort((a, b) => {
+      if (a.time && b.time) return a.time.localeCompare(b.time);
+      if (a.time && !b.time) return -1;
+      if (!a.time && b.time) return 1;
+      return 0;
+    });
+
+    const chips = sorted.map(item => {
+      const idx = item.origIdx;
+      const idea = item.ideaId ? ideas.find(i => i.id === item.ideaId) : null;
+      const title = idea ? idea.title : (item.title || 'Untitled');
       const cat = idea ? CATEGORIES[idea.category] : null;
+      const timeVal = item.time || '';
+      const isManual = !item.ideaId;
+
       return `<div class="itin-chip" draggable="true" ondragstart="dragChip(event,'${day.key}',${idx})">
-        <span>${cat ? cat.emoji + ' ' : ''}${esc(title)}</span>
+        <div style="flex:1;min-width:0">
+          ${timeVal
+            ? `<span class="itin-chip-time">${esc(timeVal)}</span>`
+            : `<input class="itin-chip-time-input" placeholder="Time" onchange="updateChipTime('${day.key}',${idx},this.value)" onclick="event.stopPropagation()" />`
+          }
+          <div>${cat ? cat.emoji + ' ' : ''}${esc(title)}</div>
+          ${isManual ? '<span class="itin-chip-manual">✎ manual</span>' : ''}
+        </div>
         <button class="chip-remove" onclick="removeFromDay('${day.key}',${idx})">✕</button>
       </div>`;
     }).join('');
+
     return `<div class="itin-day" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="dropOnDay(event,'${day.key}');this.classList.remove('drag-over')">
       <div class="day-title">${day.label}<small>${day.day}</small></div>
-      ${chips || '<div style="font-size:0.72rem;color:var(--text-light);text-align:center;padding:8px;">Drop ideas here</div>'}
+      ${chips || '<div style="font-size:0.72rem;color:var(--text-light);text-align:center;padding:8px;">Drop ideas or add below</div>'}
+      <div class="itin-add-row">
+        <input class="itin-add-input" id="itin-input-${day.key}" placeholder="Add activity..." onkeydown="if(event.key==='Enter')addManualToDay('${day.key}')" />
+        <input class="itin-add-time" id="itin-time-${day.key}" placeholder="Time" />
+        <button class="itin-add-btn" onclick="addManualToDay('${day.key}')" title="Add">+</button>
+      </div>
     </div>`;
   }).join('');
 
-  // Unassigned pool — show ALL ideas (can add same idea multiple times)
+  // Unassigned pool — show ALL ideas
   const pool = document.getElementById('unassignedPool');
   pool.innerHTML = ideas.map(idea => {
     const cat = CATEGORIES[idea.category] || CATEGORIES.other;
@@ -2258,17 +2367,15 @@ function dropOnDay(e, targetDay) {
   if (!dragSource) return;
 
   if (dragSource.type === 'pool') {
-    // Copy from pool
     if (!itineraryData[targetDay]) itineraryData[targetDay] = [];
-    itineraryData[targetDay].push(dragSource.ideaId);
+    itineraryData[targetDay].push({ ideaId: dragSource.ideaId, time: '' });
   } else if (dragSource.type === 'chip') {
-    // Move from another day
     const srcArr = itineraryData[dragSource.dayKey] || [];
-    const ideaId = srcArr[dragSource.idx];
+    const item = srcArr[dragSource.idx];
     srcArr.splice(dragSource.idx, 1);
     itineraryData[dragSource.dayKey] = srcArr;
     if (!itineraryData[targetDay]) itineraryData[targetDay] = [];
-    itineraryData[targetDay].push(ideaId);
+    itineraryData[targetDay].push(item);
   }
 
   dragSource = null;
@@ -2282,6 +2389,28 @@ function removeFromDay(dayKey, idx) {
   itineraryData[dayKey] = arr;
   saveItinerary();
   renderItinerary();
+}
+
+function addManualToDay(dayKey) {
+  const titleEl = document.getElementById('itin-input-' + dayKey);
+  const timeEl = document.getElementById('itin-time-' + dayKey);
+  const title = titleEl ? titleEl.value.trim() : '';
+  const time = timeEl ? timeEl.value.trim() : '';
+  if (!title) { toast('Enter an activity name'); return; }
+
+  if (!itineraryData[dayKey]) itineraryData[dayKey] = [];
+  itineraryData[dayKey].push({ title: title, time: time });
+  saveItinerary();
+  toast('📅 Added!');
+  renderItinerary();
+}
+
+function updateChipTime(dayKey, idx, time) {
+  if (itineraryData[dayKey] && itineraryData[dayKey][idx]) {
+    itineraryData[dayKey][idx].time = time.trim();
+    saveItinerary();
+    renderItinerary();
+  }
 }
 
 // ===== MAP =====
