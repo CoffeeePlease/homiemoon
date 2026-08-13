@@ -727,15 +727,20 @@ body::before {
 }
 .itin-days {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(140px, 1fr));
   gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 8px;
 }
 .itin-day {
   min-height: 200px;
+  min-width: 140px;
   background: var(--sand-light);
   border-radius: var(--radius-md);
   padding: 10px;
   transition: background 0.2s;
+  display: flex;
+  flex-direction: column;
 }
 .itin-day.drag-over { background: var(--sand); }
 .itin-day .day-title {
@@ -808,12 +813,13 @@ body::before {
 .itin-add-row {
   display: flex;
   gap: 4px;
-  margin-top: 8px;
+  margin-top: auto;
   padding-top: 8px;
   border-top: 1px dashed var(--sand-dark);
+  flex-wrap: wrap;
 }
 .itin-add-input {
-  flex: 1;
+  flex: 1 1 100%;
   padding: 6px 8px;
   font-size: 0.72rem;
   border-radius: 6px;
@@ -823,6 +829,7 @@ body::before {
   font-family: 'DM Sans', sans-serif;
   outline: none;
   min-width: 0;
+  box-sizing: border-box;
 }
 .itin-add-input::placeholder { color: var(--text-light); }
 .itin-add-time {
@@ -836,6 +843,8 @@ body::before {
   font-family: 'DM Sans', sans-serif;
   outline: none;
   text-align: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 .itin-add-time::placeholder { color: var(--text-light); }
 .itin-add-btn {
@@ -886,6 +895,11 @@ body::before {
 .pool-chip:hover { background: var(--gold-light); }
 
 /* MOBILE ITINERARY: stack days vertically */
+@media (max-width: 1100px) {
+  .itin-days {
+    grid-template-columns: repeat(4, minmax(140px, 1fr));
+  }
+}
 @media (max-width: 900px) {
   .itin-days {
     grid-template-columns: repeat(2, 1fr);
