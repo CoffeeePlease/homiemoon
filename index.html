@@ -727,20 +727,15 @@ body::before {
 }
 .itin-days {
   display: grid;
-  grid-template-columns: repeat(7, minmax(140px, 1fr));
+  grid-template-columns: repeat(7, 1fr);
   gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 8px;
 }
 .itin-day {
   min-height: 200px;
-  min-width: 140px;
   background: var(--sand-light);
   border-radius: var(--radius-md);
   padding: 10px;
   transition: background 0.2s;
-  display: flex;
-  flex-direction: column;
 }
 .itin-day.drag-over { background: var(--sand); }
 .itin-day .day-title {
@@ -774,7 +769,6 @@ body::before {
   word-break: break-word;
 }
 .itin-chip:active { cursor: grabbing; }
-.itin-chip.drag-over-chip { border-top: 2px solid var(--teal); margin-top: -2px; }
 .itin-chip .chip-remove {
   background: none;
   border: none;
@@ -784,82 +778,6 @@ body::before {
   padding: 2px;
   flex-shrink: 0;
 }
-.itin-chip-time {
-  display: inline-block;
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: var(--teal);
-  background: rgba(42,157,143,0.1);
-  padding: 1px 6px;
-  border-radius: 4px;
-  margin-bottom: 2px;
-}
-.itin-chip-time-input {
-  width: 65px;
-  padding: 2px 4px;
-  font-size: 0.65rem;
-  border-radius: 4px;
-  border: 1px solid var(--sand-dark);
-  background: white;
-  color: var(--text-dark);
-  font-family: 'DM Sans', sans-serif;
-  outline: none;
-  margin-bottom: 2px;
-}
-.itin-chip-manual {
-  font-size: 0.6rem;
-  color: var(--text-light);
-  font-style: italic;
-}
-.itin-add-row {
-  display: flex;
-  gap: 4px;
-  margin-top: auto;
-  padding-top: 8px;
-  border-top: 1px dashed var(--sand-dark);
-  flex-wrap: wrap;
-}
-.itin-add-input {
-  flex: 1 1 100%;
-  padding: 6px 8px;
-  font-size: 0.72rem;
-  border-radius: 6px;
-  border: 1px solid var(--sand-dark);
-  background: white;
-  color: var(--text-dark);
-  font-family: 'DM Sans', sans-serif;
-  outline: none;
-  min-width: 0;
-  box-sizing: border-box;
-}
-.itin-add-input::placeholder { color: var(--text-light); }
-.itin-add-time {
-  width: 55px;
-  padding: 6px 4px;
-  font-size: 0.72rem;
-  border-radius: 6px;
-  border: 1px solid var(--sand-dark);
-  background: white;
-  color: var(--text-dark);
-  font-family: 'DM Sans', sans-serif;
-  outline: none;
-  text-align: center;
-  flex-shrink: 0;
-  box-sizing: border-box;
-}
-.itin-add-time::placeholder { color: var(--text-light); }
-.itin-add-btn {
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: none;
-  background: var(--teal);
-  color: white;
-  font-size: 0.85rem;
-  cursor: pointer;
-  font-weight: 700;
-  line-height: 1;
-}
-.itin-add-btn:hover { opacity: 0.85; }
 .unassigned-section {
   margin-top: 20px;
   padding-top: 16px;
@@ -896,11 +814,6 @@ body::before {
 .pool-chip:hover { background: var(--gold-light); }
 
 /* MOBILE ITINERARY: stack days vertically */
-@media (max-width: 1100px) {
-  .itin-days {
-    grid-template-columns: repeat(4, minmax(140px, 1fr));
-  }
-}
 @media (max-width: 900px) {
   .itin-days {
     grid-template-columns: repeat(2, 1fr);
@@ -1626,7 +1539,7 @@ body::before {
   <div id="page-itinerary" class="hidden">
     <div class="itinerary-section">
       <h2>📅 Trip Itinerary</h2>
-      <p class="itin-sub">Drag ideas or type directly into each day · add times to stay organized</p>
+      <p class="itin-sub">Drag ideas into days — same idea can go on multiple days</p>
       <div class="itin-days" id="itinDays"></div>
       <div class="unassigned-section">
         <h3>All Ideas</h3>
@@ -1685,11 +1598,31 @@ body::before {
           <img id="receiptPreviewImg" style="max-width:100%;max-height:200px;border-radius:8px;">
         </div>
 
-        <h3 style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--mahogany);margin:16px 0 8px;">Line Items</h3>
+        <h3 style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--mahogany);margin:16px 0 8px;">How to split?</h3>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button id="modeLineItems" onclick="setSplitMode('items')" style="flex:1;padding:10px;border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;font-size:0.82rem;border:2px solid var(--teal);background:var(--teal);color:white;">By Line Items</button>
+          <button id="modeTotalOnly" onclick="setSplitMode('total')" style="flex:1;padding:10px;border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;font-size:0.82rem;border:2px solid var(--sand-dark);background:white;color:var(--text-dark);">Split Total Evenly</button>
+        </div>
+
+        <div id="lineItemsSection">
         <div class="manual-form" id="lineItemsForm"></div>
         <button onclick="addManualLineItem()" style="padding:8px 14px;background:var(--teal);color:white;border:none;border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;font-size:0.82rem;margin-bottom:16px;">+ Add Item</button>
+        </div>
 
-        <div style="display:flex;gap:12px;margin-bottom:12px;">
+        <div id="totalOnlySection" class="hidden">
+          <div class="form-group" style="margin-bottom:12px">
+            <label style="font-size:0.8rem;font-weight:600;color:var(--text-medium);display:block;margin-bottom:4px;">Total Amount ($)</label>
+            <input type="number" id="receiptTotalOnly" step="0.01" min="0" placeholder="e.g. 850.00" style="width:100%;padding:12px 14px;border:2px solid var(--sand-dark);border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.95rem;outline:none;">
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label style="font-size:0.8rem;font-weight:600;color:var(--text-medium);display:block;margin-bottom:4px;">Split between how many people?</label>
+            <input type="number" id="receiptSplitCount" min="1" value="10" placeholder="10" style="width:100%;padding:12px 14px;border:2px solid var(--sand-dark);border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.95rem;outline:none;">
+          </div>
+          <div id="evenSplitPreview" style="background:var(--sand-light);padding:14px;border-radius:var(--radius-md);margin-bottom:16px;text-align:center;font-size:0.9rem;color:var(--text-medium);display:none;">
+          </div>
+        </div>
+
+        <div id="taxTipRow" style="display:flex;gap:12px;margin-bottom:12px;">
           <div style="flex:1">
             <label style="font-size:0.8rem;font-weight:600;color:var(--text-medium);display:block;margin-bottom:4px;">Tax</label>
             <input type="number" id="receiptTax" step="0.01" min="0" value="0" placeholder="0.00" style="width:100%;padding:10px 12px;border:2px solid var(--sand-dark);border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;">
@@ -2282,17 +2215,7 @@ async function loadItinerary() {
   try {
     const rows = await supaFetch('itinerary', 'GET', null, `?id=eq.main`);
     if (rows && rows.length > 0) {
-      const raw = rows[0].days || {};
-      // Migrate old string-only format to new object format
-      const migrated = {};
-      TRIP_DAYS.forEach(d => {
-        const items = raw[d.key] || [];
-        migrated[d.key] = items.map(item => {
-          if (typeof item === 'string') return { ideaId: item, time: '' };
-          return item;
-        });
-      });
-      itineraryData = migrated;
+      itineraryData = rows[0].days || {};
     } else {
       itineraryData = {};
       await supaFetch('itinerary', 'POST', { id: 'main', days: {} });
@@ -2314,44 +2237,23 @@ async function saveItinerary() {
 function renderItinerary() {
   const daysContainer = document.getElementById('itinDays');
   daysContainer.innerHTML = TRIP_DAYS.map(day => {
-    const items = itineraryData[day.key] || [];
-
-    const chips = items.map((item, idx) => {
-      const idea = item.ideaId ? ideas.find(i => i.id === item.ideaId) : null;
-      const title = idea ? idea.title : (item.title || 'Untitled');
+    const dayIds = itineraryData[day.key] || [];
+    const chips = dayIds.map((ideaId, idx) => {
+      const idea = ideas.find(i => i.id === ideaId);
+      const title = idea ? idea.title : '(Unknown)';
       const cat = idea ? CATEGORIES[idea.category] : null;
-      const timeVal = item.time || '';
-      const isManual = !item.ideaId;
-
-      return `<div class="itin-chip" draggable="true"
-        ondragstart="dragChip(event,'${day.key}',${idx})"
-        ondragover="event.preventDefault();event.stopPropagation();this.classList.add('drag-over-chip')"
-        ondragleave="this.classList.remove('drag-over-chip')"
-        ondrop="event.stopPropagation();this.classList.remove('drag-over-chip');dropOnChip(event,'${day.key}',${idx})">
-        <div style="flex:1;min-width:0">
-          ${timeVal
-            ? `<span class="itin-chip-time">${esc(timeVal)}</span>`
-            : `<input class="itin-chip-time-input" placeholder="Time" onchange="updateChipTime('${day.key}',${idx},this.value)" onclick="event.stopPropagation()" />`
-          }
-          <div>${cat ? cat.emoji + ' ' : ''}${esc(title)}</div>
-          ${isManual ? '<span class="itin-chip-manual">✎ manual</span>' : ''}
-        </div>
+      return `<div class="itin-chip" draggable="true" ondragstart="dragChip(event,'${day.key}',${idx})">
+        <span>${cat ? cat.emoji + ' ' : ''}${esc(title)}</span>
         <button class="chip-remove" onclick="removeFromDay('${day.key}',${idx})">✕</button>
       </div>`;
     }).join('');
-
-    return `<div class="itin-day" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="this.classList.remove('drag-over');dropOnDay(event,'${day.key}')">
+    return `<div class="itin-day" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="dropOnDay(event,'${day.key}');this.classList.remove('drag-over')">
       <div class="day-title">${day.label}<small>${day.day}</small></div>
-      ${chips || '<div style="font-size:0.72rem;color:var(--text-light);text-align:center;padding:8px;">Drop ideas or add below</div>'}
-      <div class="itin-add-row">
-        <input class="itin-add-input" id="itin-input-${day.key}" placeholder="Add activity..." onkeydown="if(event.key==='Enter')addManualToDay('${day.key}')" />
-        <input class="itin-add-time" id="itin-time-${day.key}" placeholder="Time" />
-        <button class="itin-add-btn" onclick="addManualToDay('${day.key}')" title="Add">+</button>
-      </div>
+      ${chips || '<div style="font-size:0.72rem;color:var(--text-light);text-align:center;padding:8px;">Drop ideas here</div>'}
     </div>`;
   }).join('');
 
-  // Unassigned pool — show ALL ideas
+  // Unassigned pool — show ALL ideas (can add same idea multiple times)
   const pool = document.getElementById('unassignedPool');
   pool.innerHTML = ideas.map(idea => {
     const cat = CATEGORIES[idea.category] || CATEGORIES.other;
@@ -2371,50 +2273,23 @@ function dragPool(e, ideaId) {
   e.dataTransfer.effectAllowed = 'copy';
 }
 
-// Drop onto a specific chip — insert at that position (reorder)
-function dropOnChip(e, targetDay, targetIdx) {
-  e.preventDefault();
-  if (!dragSource) return;
-
-  let item;
-  if (dragSource.type === 'pool') {
-    item = { ideaId: dragSource.ideaId, time: '' };
-  } else if (dragSource.type === 'chip') {
-    const srcArr = itineraryData[dragSource.dayKey] || [];
-    item = srcArr[dragSource.idx];
-    srcArr.splice(dragSource.idx, 1);
-    itineraryData[dragSource.dayKey] = srcArr;
-    // Adjust target if moving within same day and source was before target
-    if (dragSource.dayKey === targetDay && dragSource.idx < targetIdx) {
-      targetIdx--;
-    }
-  }
-
-  if (!itineraryData[targetDay]) itineraryData[targetDay] = [];
-  itineraryData[targetDay].splice(targetIdx, 0, item);
-
-  dragSource = null;
-  saveItinerary();
-  renderItinerary();
-}
-
-// Drop on the day column itself — append to end
 function dropOnDay(e, targetDay) {
   e.preventDefault();
   if (!dragSource) return;
 
-  let item;
   if (dragSource.type === 'pool') {
-    item = { ideaId: dragSource.ideaId, time: '' };
+    // Copy from pool
+    if (!itineraryData[targetDay]) itineraryData[targetDay] = [];
+    itineraryData[targetDay].push(dragSource.ideaId);
   } else if (dragSource.type === 'chip') {
+    // Move from another day
     const srcArr = itineraryData[dragSource.dayKey] || [];
-    item = srcArr[dragSource.idx];
+    const ideaId = srcArr[dragSource.idx];
     srcArr.splice(dragSource.idx, 1);
     itineraryData[dragSource.dayKey] = srcArr;
+    if (!itineraryData[targetDay]) itineraryData[targetDay] = [];
+    itineraryData[targetDay].push(ideaId);
   }
-
-  if (!itineraryData[targetDay]) itineraryData[targetDay] = [];
-  itineraryData[targetDay].push(item);
 
   dragSource = null;
   saveItinerary();
@@ -2427,28 +2302,6 @@ function removeFromDay(dayKey, idx) {
   itineraryData[dayKey] = arr;
   saveItinerary();
   renderItinerary();
-}
-
-function addManualToDay(dayKey) {
-  const titleEl = document.getElementById('itin-input-' + dayKey);
-  const timeEl = document.getElementById('itin-time-' + dayKey);
-  const title = titleEl ? titleEl.value.trim() : '';
-  const time = timeEl ? timeEl.value.trim() : '';
-  if (!title) { toast('Enter an activity name'); return; }
-
-  if (!itineraryData[dayKey]) itineraryData[dayKey] = [];
-  itineraryData[dayKey].push({ title: title, time: time });
-  saveItinerary();
-  toast('📅 Added!');
-  renderItinerary();
-}
-
-function updateChipTime(dayKey, idx, time) {
-  if (itineraryData[dayKey] && itineraryData[dayKey][idx]) {
-    itineraryData[dayKey][idx].time = time.trim();
-    saveItinerary();
-    renderItinerary();
-  }
 }
 
 // ===== MAP =====
@@ -2529,6 +2382,57 @@ function showNewReceipt() {
   document.getElementById('receiptProcessing').classList.add('hidden');
   tempLineItems = [{ name: '', price: '' }];
   renderLineItemsForm();
+  setSplitMode('items');
+}
+
+let currentSplitMode = 'items';
+
+function setSplitMode(mode) {
+  currentSplitMode = mode;
+  const itemsBtn = document.getElementById('modeLineItems');
+  const totalBtn = document.getElementById('modeTotalOnly');
+  const itemsSec = document.getElementById('lineItemsSection');
+  const totalSec = document.getElementById('totalOnlySection');
+  const taxTipRow = document.getElementById('taxTipRow');
+
+  if (mode === 'items') {
+    itemsBtn.style.background = 'var(--teal)';
+    itemsBtn.style.borderColor = 'var(--teal)';
+    itemsBtn.style.color = 'white';
+    totalBtn.style.background = 'white';
+    totalBtn.style.borderColor = 'var(--sand-dark)';
+    totalBtn.style.color = 'var(--text-dark)';
+    itemsSec.classList.remove('hidden');
+    totalSec.classList.add('hidden');
+    if (taxTipRow) taxTipRow.style.display = 'flex';
+  } else {
+    totalBtn.style.background = 'var(--teal)';
+    totalBtn.style.borderColor = 'var(--teal)';
+    totalBtn.style.color = 'white';
+    itemsBtn.style.background = 'white';
+    itemsBtn.style.borderColor = 'var(--sand-dark)';
+    itemsBtn.style.color = 'var(--text-dark)';
+    itemsSec.classList.add('hidden');
+    totalSec.classList.remove('hidden');
+    if (taxTipRow) taxTipRow.style.display = 'none';
+    updateEvenSplitPreview();
+    // Listen for input changes
+    document.getElementById('receiptTotalOnly').addEventListener('input', updateEvenSplitPreview);
+    document.getElementById('receiptSplitCount').addEventListener('input', updateEvenSplitPreview);
+  }
+}
+
+function updateEvenSplitPreview() {
+  const total = parseFloat(document.getElementById('receiptTotalOnly')?.value) || 0;
+  const count = parseInt(document.getElementById('receiptSplitCount')?.value) || 1;
+  const preview = document.getElementById('evenSplitPreview');
+  if (total > 0) {
+    const perPerson = total / count;
+    preview.style.display = 'block';
+    preview.innerHTML = `<strong>$${total.toFixed(2)}</strong> ÷ <strong>${count}</strong> people = <strong style="color:var(--teal);font-size:1.1rem;">$${perPerson.toFixed(2)}</strong> each`;
+  } else {
+    preview.style.display = 'none';
+  }
 }
 
 function cancelNewReceipt() {
@@ -2546,23 +2450,32 @@ function renderReceiptList() {
     const items = data.items || [];
     const tax = parseFloat(data.tax) || 0;
     const tip = parseFloat(data.tip) || 0;
-    const subtotal = items.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
-    const total = subtotal + tax + tip;
+    const isEvenSplit = data.splitMode === 'even';
+    const total = isEvenSplit ? (data.totalAmount || 0) : items.reduce((s, i) => s + (parseFloat(i.price) || 0), 0) + tax + tip;
     const payments = data.payments || {};
-    const claimers = new Set();
-    items.forEach(i => (i.claims || []).forEach(c => claimers.add(c)));
-
-    const paidCount = Object.values(payments).filter(v => v).length;
-    const totalPeople = claimers.size;
     const payerName = data.payer || 'Unknown';
+
+    let metaText, paidCount, totalPeople;
+    if (isEvenSplit) {
+      totalPeople = data.splitCount || 1;
+      paidCount = Object.values(payments).filter(v => v).length;
+      metaText = `Paid by ${esc(payerName)} · $${(data.perPerson || 0).toFixed(2)}/person · ${totalPeople} people`;
+    } else {
+      const claimers = new Set();
+      items.forEach(i => (i.claims || []).forEach(c => claimers.add(c)));
+      totalPeople = claimers.size;
+      paidCount = Object.values(payments).filter(v => v).length;
+      metaText = `Paid by ${esc(payerName)} · ${items.length} items · ${totalPeople} people`;
+    }
 
     return `<div class="receipt-card" onclick="viewReceipt('${r.id}')">
       <div class="rc-header">
         <span class="rc-title">${esc(r.name)}</span>
         <span class="rc-total">$${total.toFixed(2)}</span>
       </div>
-      <div class="rc-meta">Paid by ${esc(payerName)} · ${items.length} items · ${totalPeople} people</div>
+      <div class="rc-meta">${metaText}</div>
       <div class="rc-status">
+        ${isEvenSplit ? '<span class="rc-badge" style="background:var(--teal-light);color:var(--teal);">Even Split</span>' : ''}
         ${paidCount > 0 ? `<span class="rc-badge paid">✓ ${paidCount} paid</span>` : ''}
         ${totalPeople - paidCount > 0 ? `<span class="rc-badge unpaid">${totalPeople - paidCount} unpaid</span>` : ''}
       </div>
@@ -2664,22 +2577,48 @@ async function saveReceipt() {
   if (!name) return toast('Give this receipt a name', true);
   if (!payer) return toast('Who paid?', true);
 
-  const items = tempLineItems
-    .filter(i => i.name && i.price)
-    .map(i => ({ name: i.name.trim(), price: parseFloat(i.price) || 0, claims: [] }));
+  let receiptData;
 
-  if (items.length === 0) return toast('Add at least one item', true);
+  if (currentSplitMode === 'total') {
+    // Even split mode — no line items
+    const totalAmount = parseFloat(document.getElementById('receiptTotalOnly').value) || 0;
+    const splitCount = parseInt(document.getElementById('receiptSplitCount').value) || 1;
+    if (totalAmount <= 0) return toast('Enter the total amount', true);
 
-  const receiptData = {
-    name,
-    data: {
-      payer,
-      items,
-      tax: parseFloat(document.getElementById('receiptTax').value) || 0,
-      tip: parseFloat(document.getElementById('receiptTip').value) || 0,
-      payments: {}
-    }
-  };
+    receiptData = {
+      name,
+      data: {
+        payer,
+        splitMode: 'even',
+        totalAmount,
+        splitCount,
+        perPerson: Math.round((totalAmount / splitCount) * 100) / 100,
+        items: [],
+        tax: 0,
+        tip: 0,
+        payments: {}
+      }
+    };
+  } else {
+    // Line items mode
+    const items = tempLineItems
+      .filter(i => i.name && i.price)
+      .map(i => ({ name: i.name.trim(), price: parseFloat(i.price) || 0, claims: [] }));
+
+    if (items.length === 0) return toast('Add at least one item', true);
+
+    receiptData = {
+      name,
+      data: {
+        payer,
+        splitMode: 'items',
+        items,
+        tax: parseFloat(document.getElementById('receiptTax').value) || 0,
+        tip: parseFloat(document.getElementById('receiptTip').value) || 0,
+        payments: {}
+      }
+    };
+  }
 
   try {
     await supaFetch('receipts', 'POST', receiptData);
@@ -2709,76 +2648,113 @@ function renderReceiptDetail(receipt) {
   const tip = parseFloat(data.tip) || 0;
   const payer = data.payer || 'Unknown';
   const payments = data.payments || {};
-  const subtotal = items.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
-  const total = subtotal + tax + tip;
-
-  // Calculate who owes what
-  const claimers = new Set();
-  items.forEach(i => (i.claims || []).forEach(c => claimers.add(c)));
-  const numClaimers = claimers.size || 1;
-  const taxPerPerson = tax / numClaimers;
-  const tipPerPerson = tip / numClaimers;
-
-  const owes = {};
-  claimers.forEach(name => { owes[name] = 0; });
-  items.forEach(item => {
-    const claims = item.claims || [];
-    if (claims.length > 0) {
-      const split = (parseFloat(item.price) || 0) / claims.length;
-      claims.forEach(name => { owes[name] = (owes[name] || 0) + split; });
-    }
-  });
-  // Add tax + tip share
-  Object.keys(owes).forEach(name => {
-    owes[name] += taxPerPerson + tipPerPerson;
-  });
+  const isEvenSplit = data.splitMode === 'even';
 
   let html = `
     <button class="receipt-back" onclick="showReceiptList()">← Back to receipts</button>
     <h3>${esc(receipt.name)}</h3>
     <div class="rd-meta">Paid by <strong>${esc(payer)}</strong></div>
-
-    <div class="line-items">
-      ${items.map((item, i) => {
-        const isClaimed = (item.claims || []).includes(currentUser);
-        return `<div class="line-item">
-          <span class="li-name">${esc(item.name)}</span>
-          <span class="li-price">$${(parseFloat(item.price) || 0).toFixed(2)}</span>
-          <div class="li-claims">
-            ${(item.claims || []).map(c => `<span class="claim-chip">${esc(c)}</span>`).join('')}
-            <button class="claim-btn ${isClaimed ? 'claimed' : ''}" onclick="toggleClaim('${receipt.id}',${i})">
-              ${isClaimed ? '✓ Mine' : '+ Mine'}
-            </button>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>
-
-    <div class="extras-row"><span>Subtotal</span><span>$${subtotal.toFixed(2)}</span></div>
-    <div class="extras-row"><span>Tax</span><span>$${tax.toFixed(2)}</span></div>
-    <div class="extras-row"><span>Tip</span><span>$${tip.toFixed(2)}</span></div>
-    <div class="extras-row total-row"><span>Total</span><span>$${total.toFixed(2)}</span></div>
-
-    <div class="owes-section">
-      <h4>💸 Who Owes What</h4>
-      ${Object.entries(owes).map(([name, amount]) => {
-        const isPayer = name === payer;
-        const isPaid = payments[name] === true;
-        return `<div class="owe-row ${isPayer ? 'is-payer' : ''}">
-          <span class="owe-name">${esc(name)} ${isPayer ? '(paid the bill)' : ''}</span>
-          <span class="owe-amount ${isPayer ? '' : amount === 0 ? 'zero' : ''}">
-            ${isPayer ? 'Covered $' + total.toFixed(2) : '$' + amount.toFixed(2)}
-          </span>
-          ${!isPayer ? `<button class="paid-toggle ${isPaid ? 'paid' : 'unpaid'}" onclick="togglePaid('${receipt.id}','${esc(name)}')">
-            ${isPaid ? '✓ Paid' : 'Mark Paid'}
-          </button>` : ''}
-        </div>`;
-      }).join('')}
-      ${Object.keys(owes).length === 0 ? '<p style="font-size:0.85rem;color:var(--text-light);padding:8px 0;">Nobody has claimed items yet — tap "+ Mine" on the items you ordered.</p>' : ''}
-    </div>
-
-    <button onclick="deleteReceipt('${receipt.id}')" style="margin-top:20px;padding:10px;width:100%;background:none;border:2px solid #dc3545;color:#dc3545;border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;font-size:0.85rem;">Delete Receipt</button>
   `;
+
+  if (isEvenSplit) {
+    // Even split display
+    const totalAmount = data.totalAmount || 0;
+    const splitCount = data.splitCount || 1;
+    const perPerson = data.perPerson || Math.round((totalAmount / splitCount) * 100) / 100;
+    const splitNames = data.splitNames || [];
+
+    html += `
+      <div style="background:var(--sand-light);padding:20px;border-radius:var(--radius-md);margin:16px 0;text-align:center;">
+        <div style="font-size:0.85rem;color:var(--text-light);margin-bottom:4px;">Total</div>
+        <div style="font-size:1.8rem;font-weight:700;font-family:'Playfair Display',serif;color:var(--mahogany);">$${totalAmount.toFixed(2)}</div>
+        <div style="margin-top:10px;font-size:0.9rem;color:var(--text-medium);">
+          Split <strong>${splitCount}</strong> ways = <strong style="color:var(--teal);font-size:1.1rem;">$${perPerson.toFixed(2)}</strong> each
+        </div>
+      </div>
+
+      <div class="owes-section">
+        <h4>💸 Who Owes What</h4>
+        <p style="font-size:0.8rem;color:var(--text-light);margin-bottom:10px;">Everyone owes <strong>$${perPerson.toFixed(2)}</strong> to ${esc(payer)}</p>
+        ${Array.from({ length: splitCount }, (_, i) => {
+          const personKey = 'person-' + i;
+          const isPaid = payments[personKey] === true;
+          return `<div class="owe-row">
+            <span class="owe-name">Person ${i + 1}</span>
+            <span class="owe-amount">$${perPerson.toFixed(2)}</span>
+            <button class="paid-toggle ${isPaid ? 'paid' : 'unpaid'}" onclick="togglePaid('${receipt.id}','${personKey}')">
+              ${isPaid ? '✓ Paid' : 'Mark Paid'}
+            </button>
+          </div>`;
+        }).join('')}
+      </div>
+    `;
+  } else {
+    // Line items display (original logic)
+    const subtotal = items.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
+    const total = subtotal + tax + tip;
+
+    const claimers = new Set();
+    items.forEach(i => (i.claims || []).forEach(c => claimers.add(c)));
+    const numClaimers = claimers.size || 1;
+    const taxPerPerson = tax / numClaimers;
+    const tipPerPerson = tip / numClaimers;
+
+    const owes = {};
+    claimers.forEach(name => { owes[name] = 0; });
+    items.forEach(item => {
+      const claims = item.claims || [];
+      if (claims.length > 0) {
+        const split = (parseFloat(item.price) || 0) / claims.length;
+        claims.forEach(name => { owes[name] = (owes[name] || 0) + split; });
+      }
+    });
+    Object.keys(owes).forEach(name => {
+      owes[name] += taxPerPerson + tipPerPerson;
+    });
+
+    html += `
+      <div class="line-items">
+        ${items.map((item, i) => {
+          const isClaimed = (item.claims || []).includes(currentUser);
+          return `<div class="line-item">
+            <span class="li-name">${esc(item.name)}</span>
+            <span class="li-price">$${(parseFloat(item.price) || 0).toFixed(2)}</span>
+            <div class="li-claims">
+              ${(item.claims || []).map(c => `<span class="claim-chip">${esc(c)}</span>`).join('')}
+              <button class="claim-btn ${isClaimed ? 'claimed' : ''}" onclick="toggleClaim('${receipt.id}',${i})">
+                ${isClaimed ? '✓ Mine' : '+ Mine'}
+              </button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <div class="extras-row"><span>Subtotal</span><span>$${subtotal.toFixed(2)}</span></div>
+      <div class="extras-row"><span>Tax</span><span>$${tax.toFixed(2)}</span></div>
+      <div class="extras-row"><span>Tip</span><span>$${tip.toFixed(2)}</span></div>
+      <div class="extras-row total-row"><span>Total</span><span>$${total.toFixed(2)}</span></div>
+
+      <div class="owes-section">
+        <h4>💸 Who Owes What</h4>
+        ${Object.entries(owes).map(([name, amount]) => {
+          const isPayer = name === payer;
+          const isPaid = payments[name] === true;
+          return `<div class="owe-row ${isPayer ? 'is-payer' : ''}">
+            <span class="owe-name">${esc(name)} ${isPayer ? '(paid the bill)' : ''}</span>
+            <span class="owe-amount ${isPayer ? '' : amount === 0 ? 'zero' : ''}">
+              ${isPayer ? 'Covered $' + total.toFixed(2) : '$' + amount.toFixed(2)}
+            </span>
+            ${!isPayer ? `<button class="paid-toggle ${isPaid ? 'paid' : 'unpaid'}" onclick="togglePaid('${receipt.id}','${esc(name)}')">
+              ${isPaid ? '✓ Paid' : 'Mark Paid'}
+            </button>` : ''}
+          </div>`;
+        }).join('')}
+        ${Object.keys(owes).length === 0 ? '<p style="font-size:0.85rem;color:var(--text-light);padding:8px 0;">Nobody has claimed items yet — tap "+ Mine" on the items you ordered.</p>' : ''}
+      </div>
+    `;
+  }
+
+  html += `<button onclick="deleteReceipt('${receipt.id}')" style="margin-top:20px;padding:10px;width:100%;background:none;border:2px solid #dc3545;color:#dc3545;border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;font-size:0.85rem;">Delete Receipt</button>`;
   container.innerHTML = html;
 }
 
