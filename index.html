@@ -2239,7 +2239,7 @@ function renderItinerary() {
   daysContainer.innerHTML = TRIP_DAYS.map(day => {
     const dayIds = itineraryData[day.key] || [];
     const chips = dayIds.map((ideaId, idx) => {
-      const idea = ideas.find(i => i.id === ideaId);
+      const idea = ideas.find(i => String(i.id) === String(ideaId));
       const title = idea ? idea.title : '(Unknown)';
       const cat = idea ? CATEGORIES[idea.category] : null;
       return `<div class="itin-chip" draggable="true" ondragstart="dragChip(event,'${day.key}',${idx})">
