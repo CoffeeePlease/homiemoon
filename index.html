@@ -1680,9 +1680,14 @@ body::before {
         </div>
 
         <div class="form-group hidden" id="participantsGroup" style="margin-bottom:12px">
-          <label>People splitting the bill</label>
-          <input type="text" id="receiptParticipants" placeholder="e.g. Virgil, Alex, Sam, Jordan" oninput="updateEvenSplitPreview()" style="width:100%;padding:12px 14px;border:2px solid var(--sand-dark);border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.95rem;outline:none;">
-          <p style="font-size:0.72rem;color:var(--text-light);margin-top:6px;">Separate names with commas. The grand total is split equally between everyone listed.</p>
+          <label style="display:block;margin-bottom:6px;">People splitting the bill</label>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <button type="button" onclick="selectAllCrew(true)" style="padding:6px 12px;border:1px solid var(--teal);background:white;color:var(--teal);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:600;cursor:pointer;">Select all</button>
+            <button type="button" onclick="selectAllCrew(false)" style="padding:6px 12px;border:1px solid var(--sand-dark);background:white;color:var(--text-medium);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:600;cursor:pointer;">Clear</button>
+          </div>
+          <div id="crewChecklist" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;margin-bottom:10px;"></div>
+          <input type="text" id="receiptParticipants" placeholder="Add other names (comma-separated)" oninput="updateEvenSplitPreview()" style="width:100%;padding:12px 14px;border:2px solid var(--sand-dark);border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.95rem;outline:none;">
+          <p style="font-size:0.72rem;color:var(--text-light);margin-top:6px;">Check the crew above, or type extra names. The grand total is split equally between everyone selected.</p>
           <p id="evenSplitPreview" style="font-size:0.8rem;color:var(--teal);font-weight:600;margin-top:6px;"></p>
         </div>
 
@@ -1927,6 +1932,7 @@ let receipts = [];
 let tempLineItems = [];
 let currentSplitMode = 'claim';
 let tempReceiptPhotoUrl = null;
+const CREW = ['VJ', 'Andrew', 'Bibi', 'Amanda', 'Kristian', 'Lyrissa', 'Jasper', 'Steve', 'Daryl', 'Michelle'];
 let travelEntries = [];
 let reservations = [];
 let editingTravelId = null;
@@ -2547,6 +2553,7 @@ function showNewReceipt() {
   document.getElementById('receiptProcessing').classList.add('hidden');
   tempLineItems = [{ name: '', price: '' }];
   tempReceiptPhotoUrl = null;
+  renderCrewChecklist();
   setSplitMode('claim');
   document.getElementById('receiptParticipants').value = '';
   renderLineItemsForm();
@@ -2581,10 +2588,40 @@ function parseParticipants(str) {
     .filter(Boolean);
 }
 
+function renderCrewChecklist() {
+  const box = document.getElementById('crewChecklist');
+  if (!box) return;
+  box.innerHTML = CREW.map(name => `
+    <label style="display:flex;align-items:center;gap:6px;padding:8px 10px;border:2px solid var(--sand-dark);border-radius:var(--radius-sm);font-size:0.85rem;cursor:pointer;background:var(--sand-light);">
+      <input type="checkbox" class="crew-check" value="${esc(name)}" onchange="updateEvenSplitPreview()" style="width:16px;height:16px;accent-color:var(--teal);cursor:pointer;">
+      ${esc(name)}
+    </label>`).join('');
+}
+
+function selectAllCrew(state) {
+  document.querySelectorAll('.crew-check').forEach(cb => { cb.checked = state; });
+  updateEvenSplitPreview();
+}
+
+function getSelectedParticipants() {
+  const checked = Array.from(document.querySelectorAll('.crew-check'))
+    .filter(cb => cb.checked)
+    .map(cb => cb.value);
+  const typed = parseParticipants(document.getElementById('receiptParticipants').value);
+  // Merge + de-dupe (case-insensitive), preserving order
+  const seen = new Set();
+  const merged = [];
+  [...checked, ...typed].forEach(name => {
+    const key = name.toLowerCase();
+    if (!seen.has(key)) { seen.add(key); merged.push(name); }
+  });
+  return merged;
+}
+
 function updateEvenSplitPreview() {
   const preview = document.getElementById('evenSplitPreview');
   if (!preview) return;
-  const people = parseParticipants(document.getElementById('receiptParticipants').value);
+  const people = getSelectedParticipants();
   const subtotal = tempLineItems.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
   const tax = parseFloat(document.getElementById('receiptTax').value) || 0;
   const tip = parseFloat(document.getElementById('receiptTip').value) || 0;
@@ -2759,9 +2796,9 @@ async function saveReceipt() {
 
   if (items.length === 0) return toast('Add at least one item', true);
 
-  const participants = parseParticipants(document.getElementById('receiptParticipants').value);
+  const participants = getSelectedParticipants();
   if (currentSplitMode === 'even' && participants.length === 0) {
-    return toast('List at least one person to split evenly', true);
+    return toast('Select at least one person to split evenly', true);
   }
 
   const receiptData = {
@@ -2849,15 +2886,19 @@ function renderReceiptDetail(receipt) {
 
     <div class="line-items">
       ${items.map((item, i) => {
-        const isClaimed = (item.claims || []).includes(currentUser);
+        const claimed = item.claims || [];
+        const claimedLower = claimed.map(x => x.toLowerCase());
+        const options = [...new Set([currentUser, ...CREW].filter(Boolean))]
+          .filter(n => !claimedLower.includes(n.toLowerCase()));
         return `<div class="line-item">
           <span class="li-name">${esc(item.name)}</span>
           <span class="li-price">$${(parseFloat(item.price) || 0).toFixed(2)}</span>
           ${splitMode === 'claim' ? `<div class="li-claims">
-            ${(item.claims || []).map(c => `<span class="claim-chip">${esc(c)}</span>`).join('')}
-            <button class="claim-btn ${isClaimed ? 'claimed' : ''}" onclick="toggleClaim('${receipt.id}',${i})">
-              ${isClaimed ? 'Claimed' : '+ Mine'}
-            </button>
+            ${claimed.map(c => `<span class="claim-chip" onclick="unclaimItem('${receipt.id}',${i},'${esc(c)}')" title="Remove ${esc(c)}" style="cursor:pointer;">${esc(c)} &times;</span>`).join('')}
+            <select onchange="if(this.value){claimItemFor('${receipt.id}',${i},this.value);this.value='';}" style="padding:5px 8px;border:2px solid var(--sand-dark);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:0.78rem;background:white;color:var(--text-medium);cursor:pointer;">
+              <option value="">+ Assign</option>
+              ${options.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('')}
+            </select>
           </div>` : ''}
         </div>`;
       }).join('')}
@@ -2891,18 +2932,33 @@ function renderReceiptDetail(receipt) {
   container.innerHTML = html;
 }
 
-// Toggle claim on a line item
-async function toggleClaim(receiptId, itemIndex) {
+// Assign / unassign a specific person to a line item
+async function claimItemFor(receiptId, itemIndex, name) {
+  const person = (name || '').trim();
+  if (!person) return;
   const receipt = receipts.find(r => r.id === receiptId);
   if (!receipt) return;
   const item = receipt.data.items[itemIndex];
   if (!item.claims) item.claims = [];
 
-  if (item.claims.includes(currentUser)) {
-    item.claims = item.claims.filter(c => c !== currentUser);
-  } else {
-    item.claims.push(currentUser);
+  // Avoid case-insensitive duplicates
+  if (item.claims.some(c => c.toLowerCase() === person.toLowerCase())) return;
+  item.claims.push(person);
+
+  try {
+    await supaFetch('receipts', 'PATCH', { data: receipt.data }, `?id=eq.${receiptId}`);
+    renderReceiptDetail(receipt);
+  } catch (err) {
+    toast('Failed to update: ' + err.message, true);
   }
+}
+
+async function unclaimItem(receiptId, itemIndex, name) {
+  const receipt = receipts.find(r => r.id === receiptId);
+  if (!receipt) return;
+  const item = receipt.data.items[itemIndex];
+  if (!item.claims) return;
+  item.claims = item.claims.filter(c => c.toLowerCase() !== (name || '').toLowerCase());
 
   try {
     await supaFetch('receipts', 'PATCH', { data: receipt.data }, `?id=eq.${receiptId}`);
