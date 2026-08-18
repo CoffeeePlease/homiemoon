@@ -11,7 +11,7 @@
 //   3. Deploy. The front-end calls it at /.netlify/functions/scan-receipt
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-3-5-sonnet-20241022';
+const MODEL = 'claude-sonnet-4-20250514';
 
 const PROMPT = `You are a receipt-scanning assistant. Read this receipt image and extract the data.
 Return ONLY a valid JSON object (no markdown, no code fences, no commentary) with this exact shape:
