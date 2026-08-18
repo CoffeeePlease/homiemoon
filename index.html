@@ -1650,7 +1650,7 @@ body::before {
     <div id="splitListView">
       <div class="split-section">
         <h2>💸 Split the Bill</h2>
-        <p class="split-sub">Upload a receipt or enter items manually. Everyone claims what they ordered — tax & tip split evenly.</p>
+        <p class="split-sub">Upload a receipt or enter items manually. Claim what you ordered, or split the whole total evenly between the crew.</p>
         <button class="split-new-btn" onclick="showNewReceipt()">+ New Receipt</button>
         <div class="receipt-list" id="receiptList"></div>
       </div>
@@ -1668,6 +1668,22 @@ body::before {
         <div class="form-group" style="margin-bottom:12px">
           <label>Who paid?</label>
           <input type="text" id="receiptPayer" placeholder="Name of person who covered the bill" style="width:100%;padding:12px 14px;border:2px solid var(--sand-dark);border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.95rem;outline:none;">
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px">
+          <label style="display:block;margin-bottom:8px;">How to split?</label>
+          <div class="split-mode-toggle" style="display:flex;gap:8px;">
+            <button type="button" id="splitModeClaimBtn" onclick="setSplitMode('claim')" style="flex:1;padding:12px;border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;border:2px solid var(--teal);background:var(--teal);color:white;">Claim items</button>
+            <button type="button" id="splitModeEvenBtn" onclick="setSplitMode('even')" style="flex:1;padding:12px;border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;border:2px solid var(--sand-dark);background:white;color:var(--text-medium);">Split evenly</button>
+          </div>
+          <p id="splitModeHint" style="font-size:0.72rem;color:var(--text-light);margin-top:6px;">Everyone taps the items they ordered; tax &amp; tip split evenly.</p>
+        </div>
+
+        <div class="form-group hidden" id="participantsGroup" style="margin-bottom:12px">
+          <label>People splitting the bill</label>
+          <input type="text" id="receiptParticipants" placeholder="e.g. Virgil, Alex, Sam, Jordan" oninput="updateEvenSplitPreview()" style="width:100%;padding:12px 14px;border:2px solid var(--sand-dark);border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.95rem;outline:none;">
+          <p style="font-size:0.72rem;color:var(--text-light);margin-top:6px;">Separate names with commas. The grand total is split equally between everyone listed.</p>
+          <p id="evenSplitPreview" style="font-size:0.8rem;color:var(--teal);font-weight:600;margin-top:6px;"></p>
         </div>
 
         <label style="font-size:0.8rem;font-weight:600;color:var(--text-medium);display:block;margin-bottom:8px;">Upload receipt photo (optional)</label>
@@ -1692,11 +1708,11 @@ body::before {
         <div style="display:flex;gap:12px;margin-bottom:12px;">
           <div style="flex:1">
             <label style="font-size:0.8rem;font-weight:600;color:var(--text-medium);display:block;margin-bottom:4px;">Tax</label>
-            <input type="number" id="receiptTax" step="0.01" min="0" value="0" placeholder="0.00" style="width:100%;padding:10px 12px;border:2px solid var(--sand-dark);border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;">
+            <input type="number" id="receiptTax" step="0.01" min="0" value="0" placeholder="0.00" oninput="updateEvenSplitPreview()" style="width:100%;padding:10px 12px;border:2px solid var(--sand-dark);border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;">
           </div>
           <div style="flex:1">
             <label style="font-size:0.8rem;font-weight:600;color:var(--text-medium);display:block;margin-bottom:4px;">Tip</label>
-            <input type="number" id="receiptTip" step="0.01" min="0" value="0" placeholder="0.00" style="width:100%;padding:10px 12px;border:2px solid var(--sand-dark);border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;">
+            <input type="number" id="receiptTip" step="0.01" min="0" value="0" placeholder="0.00" oninput="updateEvenSplitPreview()" style="width:100%;padding:10px 12px;border:2px solid var(--sand-dark);border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;">
           </div>
         </div>
 
@@ -1909,6 +1925,7 @@ let currentSort = 'newest';
 let editingId = null;
 let receipts = [];
 let tempLineItems = [];
+let currentSplitMode = 'claim';
 let travelEntries = [];
 let reservations = [];
 let editingTravelId = null;
@@ -2528,7 +2545,53 @@ function showNewReceipt() {
   document.getElementById('receiptPreview').style.display = 'none';
   document.getElementById('receiptProcessing').classList.add('hidden');
   tempLineItems = [{ name: '', price: '' }];
+  setSplitMode('claim');
+  document.getElementById('receiptParticipants').value = '';
   renderLineItemsForm();
+}
+
+function setSplitMode(mode) {
+  currentSplitMode = mode;
+  const claimBtn = document.getElementById('splitModeClaimBtn');
+  const evenBtn = document.getElementById('splitModeEvenBtn');
+  const hint = document.getElementById('splitModeHint');
+  const partGroup = document.getElementById('participantsGroup');
+  const on = 'flex:1;padding:12px;border-radius:var(--radius-md);font-family:\'DM Sans\',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;border:2px solid var(--teal);background:var(--teal);color:white;';
+  const off = 'flex:1;padding:12px;border-radius:var(--radius-md);font-family:\'DM Sans\',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;border:2px solid var(--sand-dark);background:white;color:var(--text-medium);';
+  if (mode === 'even') {
+    evenBtn.style.cssText = on;
+    claimBtn.style.cssText = off;
+    partGroup.classList.remove('hidden');
+    hint.textContent = 'One lump payment split equally between everyone you list below.';
+    updateEvenSplitPreview();
+  } else {
+    claimBtn.style.cssText = on;
+    evenBtn.style.cssText = off;
+    partGroup.classList.add('hidden');
+    hint.textContent = 'Everyone taps the items they ordered; tax & tip split evenly.';
+  }
+}
+
+function parseParticipants(str) {
+  return (str || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+function updateEvenSplitPreview() {
+  const preview = document.getElementById('evenSplitPreview');
+  if (!preview) return;
+  const people = parseParticipants(document.getElementById('receiptParticipants').value);
+  const subtotal = tempLineItems.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
+  const tax = parseFloat(document.getElementById('receiptTax').value) || 0;
+  const tip = parseFloat(document.getElementById('receiptTip').value) || 0;
+  const total = subtotal + tax + tip;
+  if (people.length === 0) {
+    preview.textContent = '';
+    return;
+  }
+  preview.textContent = `$${total.toFixed(2)} \u00f7 ${people.length} = $${(total / people.length).toFixed(2)} each`;
 }
 
 function cancelNewReceipt() {
@@ -2549,11 +2612,12 @@ function renderReceiptList() {
     const subtotal = items.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
     const total = subtotal + tax + tip;
     const payments = data.payments || {};
+    const splitMode = data.splitMode || 'claim';
     const claimers = new Set();
     items.forEach(i => (i.claims || []).forEach(c => claimers.add(c)));
 
     const paidCount = Object.values(payments).filter(v => v).length;
-    const totalPeople = claimers.size;
+    const totalPeople = splitMode === 'even' ? (data.participants || []).length : claimers.size;
     const payerName = data.payer || 'Unknown';
 
     return `<div class="receipt-card" onclick="viewReceipt('${r.id}')">
@@ -2576,7 +2640,7 @@ function renderLineItemsForm() {
   form.innerHTML = tempLineItems.map((item, i) => `
     <div class="manual-form mf-row">
       <input type="text" placeholder="Item name" value="${esc(item.name)}" onchange="tempLineItems[${i}].name=this.value">
-      <input type="number" step="0.01" min="0" placeholder="$0.00" value="${item.price}" onchange="tempLineItems[${i}].price=this.value">
+      <input type="number" step="0.01" min="0" placeholder="$0.00" value="${item.price}" onchange="tempLineItems[${i}].price=this.value;updateEvenSplitPreview()">
       <button class="mf-remove" onclick="tempLineItems.splice(${i},1);renderLineItemsForm()">✕</button>
     </div>
   `).join('');
@@ -2673,6 +2737,11 @@ async function saveReceipt() {
 
   if (items.length === 0) return toast('Add at least one item', true);
 
+  const participants = parseParticipants(document.getElementById('receiptParticipants').value);
+  if (currentSplitMode === 'even' && participants.length === 0) {
+    return toast('List at least one person to split evenly', true);
+  }
+
   const receiptData = {
     name,
     data: {
@@ -2680,7 +2749,9 @@ async function saveReceipt() {
       items,
       tax: parseFloat(document.getElementById('receiptTax').value) || 0,
       tip: parseFloat(document.getElementById('receiptTip').value) || 0,
-      payments: {}
+      payments: {},
+      splitMode: currentSplitMode,
+      participants
     }
   };
 
@@ -2715,31 +2786,38 @@ function renderReceiptDetail(receipt) {
   const subtotal = items.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
   const total = subtotal + tax + tip;
 
-  // Calculate who owes what
-  const claimers = new Set();
-  items.forEach(i => (i.claims || []).forEach(c => claimers.add(c)));
-  const numClaimers = claimers.size || 1;
-  const taxPerPerson = tax / numClaimers;
-  const tipPerPerson = tip / numClaimers;
+  const splitMode = data.splitMode || 'claim';
+  const participants = data.participants || [];
 
+  // Calculate who owes what
   const owes = {};
-  claimers.forEach(name => { owes[name] = 0; });
-  items.forEach(item => {
-    const claims = item.claims || [];
-    if (claims.length > 0) {
-      const split = (parseFloat(item.price) || 0) / claims.length;
-      claims.forEach(name => { owes[name] = (owes[name] || 0) + split; });
-    }
-  });
-  // Add tax + tip share
-  Object.keys(owes).forEach(name => {
-    owes[name] += taxPerPerson + tipPerPerson;
-  });
+  if (splitMode === 'even') {
+    const share = participants.length ? total / participants.length : 0;
+    participants.forEach(name => { owes[name] = share; });
+  } else {
+    const claimers = new Set();
+    items.forEach(i => (i.claims || []).forEach(c => claimers.add(c)));
+    const numClaimers = claimers.size || 1;
+    const taxPerPerson = tax / numClaimers;
+    const tipPerPerson = tip / numClaimers;
+    claimers.forEach(name => { owes[name] = 0; });
+    items.forEach(item => {
+      const claims = item.claims || [];
+      if (claims.length > 0) {
+        const split = (parseFloat(item.price) || 0) / claims.length;
+        claims.forEach(name => { owes[name] = (owes[name] || 0) + split; });
+      }
+    });
+    // Add tax + tip share
+    Object.keys(owes).forEach(name => {
+      owes[name] += taxPerPerson + tipPerPerson;
+    });
+  }
 
   let html = `
     <button class="receipt-back" onclick="showReceiptList()">← Back to receipts</button>
     <h3>${esc(receipt.name)}</h3>
-    <div class="rd-meta">Paid by <strong>${esc(payer)}</strong></div>
+    <div class="rd-meta">Paid by <strong>${esc(payer)}</strong>${splitMode === 'even' ? ` \u00b7 Split evenly \u00b7 ${participants.length} ${participants.length === 1 ? 'person' : 'people'}` : ''}</div>
 
     <div class="line-items">
       ${items.map((item, i) => {
@@ -2747,12 +2825,12 @@ function renderReceiptDetail(receipt) {
         return `<div class="line-item">
           <span class="li-name">${esc(item.name)}</span>
           <span class="li-price">$${(parseFloat(item.price) || 0).toFixed(2)}</span>
-          <div class="li-claims">
+          ${splitMode === 'claim' ? `<div class="li-claims">
             ${(item.claims || []).map(c => `<span class="claim-chip">${esc(c)}</span>`).join('')}
             <button class="claim-btn ${isClaimed ? 'claimed' : ''}" onclick="toggleClaim('${receipt.id}',${i})">
-              ${isClaimed ? '✓ Mine' : '+ Mine'}
+              ${isClaimed ? 'Claimed' : '+ Mine'}
             </button>
-          </div>
+          </div>` : ''}
         </div>`;
       }).join('')}
     </div>
@@ -2777,7 +2855,7 @@ function renderReceiptDetail(receipt) {
           </button>` : ''}
         </div>`;
       }).join('')}
-      ${Object.keys(owes).length === 0 ? '<p style="font-size:0.85rem;color:var(--text-light);padding:8px 0;">Nobody has claimed items yet — tap "+ Mine" on the items you ordered.</p>' : ''}
+      ${Object.keys(owes).length === 0 ? `<p style="font-size:0.85rem;color:var(--text-light);padding:8px 0;">${splitMode === 'even' ? 'No people were listed for this even split.' : 'Nobody has claimed items yet \u2014 tap "+ Mine" on the items you ordered.'}</p>` : ''}
     </div>
 
     <button onclick="deleteReceipt('${receipt.id}')" style="margin-top:20px;padding:10px;width:100%;background:none;border:2px solid #dc3545;color:#dc3545;border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;font-size:0.85rem;">Delete Receipt</button>
