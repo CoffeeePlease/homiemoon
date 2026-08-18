@@ -251,7 +251,7 @@ body::before {
   line-height: 1.5;
   font-style: italic;
 }
-.welcome-card input {
+.welcome-card input, .welcome-card select {
   width: 100%;
   padding: 14px 16px;
   border: 2px solid var(--sand-dark);
@@ -260,8 +260,11 @@ body::before {
   font-size: 1rem;
   outline: none;
   transition: border-color 0.2s;
+  background: white;
+  color: var(--text-dark);
+  cursor: pointer;
 }
-.welcome-card input:focus { border-color: var(--gold); }
+.welcome-card input:focus, .welcome-card select:focus { border-color: var(--gold); }
 .welcome-card button {
   width: 100%;
   margin-top: 14px;
@@ -1570,8 +1573,8 @@ body::before {
     <h1>Homiemoon Planner</h1>
     <p style="font-size:0.9rem;color:var(--text-medium);margin-bottom:8px;line-height:1.5;">For those who have gotten married these past six years, welcome to your Homiemoon.</p>
     <p class="tagline">"We're totally only going to chill, relax and enjoy the beaches. Totally not drinkin. Chill Vibes only"</p>
-    <input type="text" id="nameInput" placeholder="Enter your name" autocomplete="off">
-    <button onclick="enterApp()">Let's Go 🤙</button>
+    <select id="nameSelect" autocomplete="off"></select>
+    <button onclick="enterApp()">Let's Go!</button>
   </div>
 </div>
 
@@ -1988,8 +1991,8 @@ function toast(msg, isError = false) {
 
 // ===== ENTER APP =====
 function enterApp() {
-  const name = document.getElementById('nameInput').value.trim();
-  if (!name) return toast('Enter your name!', true);
+  const name = document.getElementById('nameSelect').value;
+  if (!name) return toast('Pick your name!', true);
   currentUser = name;
   document.getElementById('welcomeScreen').classList.add('hidden');
   document.getElementById('appHeader').classList.remove('hidden');
@@ -2000,9 +2003,13 @@ function enterApp() {
   loadItinerary();
 }
 
-document.getElementById('nameInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') enterApp();
-});
+// Populate the login name dropdown from the crew roster
+(function populateNameSelect() {
+  const sel = document.getElementById('nameSelect');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Select your name...</option>' +
+    CREW.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+})();
 
 // ===== NAVIGATION =====
 document.getElementById('navBar').addEventListener('click', e => {
