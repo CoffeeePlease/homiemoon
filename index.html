@@ -1926,6 +1926,7 @@ let editingId = null;
 let receipts = [];
 let tempLineItems = [];
 let currentSplitMode = 'claim';
+let tempReceiptPhotoUrl = null;
 let travelEntries = [];
 let reservations = [];
 let editingTravelId = null;
@@ -2545,6 +2546,7 @@ function showNewReceipt() {
   document.getElementById('receiptPreview').style.display = 'none';
   document.getElementById('receiptProcessing').classList.add('hidden');
   tempLineItems = [{ name: '', price: '' }];
+  tempReceiptPhotoUrl = null;
   setSplitMode('claim');
   document.getElementById('receiptParticipants').value = '';
   renderLineItemsForm();
@@ -2680,6 +2682,26 @@ async function processReceiptImage(file) {
     document.getElementById('receiptPreview').style.display = 'block';
     document.getElementById('receiptProcessing').classList.remove('hidden');
 
+    // Upload the receipt image to storage so it stays viewable in the detail view later
+    try {
+      const fileName = 'receipt_' + Date.now() + '_' + (file.name || 'photo').replace(/[^a-zA-Z0-9.]/g, '_');
+      const upRes = await fetch(`${SUPABASE_URL}/storage/v1/object/photos/${fileName}`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': file.type || 'image/jpeg'
+        },
+        body: file
+      });
+      if (upRes.ok) {
+        tempReceiptPhotoUrl = `${SUPABASE_URL}/storage/v1/object/public/photos/${fileName}`;
+      }
+    } catch (e) {
+      // Non-fatal: scanning/manual entry still works even if the photo upload fails
+      console.error('Receipt photo upload failed:', e);
+    }
+
     try {
       const response = await fetch('/.netlify/functions/scan-receipt', {
         method: 'POST',
@@ -2751,7 +2773,8 @@ async function saveReceipt() {
       tip: parseFloat(document.getElementById('receiptTip').value) || 0,
       payments: {},
       splitMode: currentSplitMode,
-      participants
+      participants,
+      photo_url: tempReceiptPhotoUrl
     }
   };
 
@@ -2818,6 +2841,11 @@ function renderReceiptDetail(receipt) {
     <button class="receipt-back" onclick="showReceiptList()">← Back to receipts</button>
     <h3>${esc(receipt.name)}</h3>
     <div class="rd-meta">Paid by <strong>${esc(payer)}</strong>${splitMode === 'even' ? ` \u00b7 Split evenly \u00b7 ${participants.length} ${participants.length === 1 ? 'person' : 'people'}` : ''}</div>
+
+    ${data.photo_url ? `<a href="${esc(data.photo_url)}" target="_blank" rel="noopener" style="display:block;margin:12px 0;">
+      <img src="${esc(data.photo_url)}" alt="Receipt photo" style="width:100%;max-height:320px;object-fit:contain;border-radius:var(--radius-md);border:2px solid var(--sand-dark);background:var(--sand-light);" onerror="this.parentNode.style.display='none'">
+      <span style="display:block;text-align:center;font-size:0.72rem;color:var(--text-light);margin-top:4px;">Tap photo to view full size</span>
+    </a>` : ''}
 
     <div class="line-items">
       ${items.map((item, i) => {
