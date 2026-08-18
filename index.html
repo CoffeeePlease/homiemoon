@@ -2627,8 +2627,11 @@ async function processReceiptImage(file) {
       });
 
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || 'Scan failed');
+        // Read as text first so a non-JSON error page (e.g. a 404) doesn't crash here
+        const rawErr = await response.text();
+        let msg = rawErr;
+        try { msg = JSON.parse(rawErr).error || rawErr; } catch {}
+        throw new Error(`(${response.status}) ${msg}`);
       }
 
       const parsed = await response.json();
@@ -2649,7 +2652,7 @@ async function processReceiptImage(file) {
       renderLineItemsForm();
       toast('Receipt read! Check the items below 🧾');
     } catch (err) {
-      toast('Could not read receipt — enter items manually', true);
+      toast('Receipt scan failed: ' + err.message, true);
       console.error('Receipt parse error:', err);
     }
     document.getElementById('receiptProcessing').classList.add('hidden');
