@@ -1651,10 +1651,23 @@ body::before {
   <div id="page-split" class="hidden">
     <div id="splitListView">
       <div class="split-section">
-        <h2>💸 Split the Bill</h2>
+        <h2>Split the Bill</h2>
         <p class="split-sub">Upload a receipt or enter items manually. Claim what you ordered, or split the whole total evenly between the crew.</p>
-        <button class="split-new-btn" onclick="showNewReceipt()">+ New Receipt</button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="split-new-btn" onclick="showNewReceipt()" style="flex:1;min-width:140px;">+ New Receipt</button>
+          <button class="split-new-btn" onclick="showSettleUp()" style="flex:1;min-width:140px;background:linear-gradient(135deg,var(--teal),var(--ocean));">Settle Up</button>
+        </div>
         <div class="receipt-list" id="receiptList"></div>
+      </div>
+    </div>
+
+    <!-- Settle up (consolidated who-owes-whom) -->
+    <div id="splitSettleView" class="hidden">
+      <div class="split-section">
+        <button class="receipt-back" onclick="showReceiptList()">← Back to receipts</button>
+        <h2>Settle Up</h2>
+        <p class="split-sub">Consolidated totals across every receipt. Already-paid amounts are excluded. Pay the one total, then tap “Mark all paid.”</p>
+        <div id="settleContent"></div>
       </div>
     </div>
 
@@ -2515,12 +2528,22 @@ function showReceiptList() {
   document.getElementById('splitListView').classList.remove('hidden');
   document.getElementById('splitNewView').classList.add('hidden');
   document.getElementById('splitDetailView').classList.add('hidden');
+  document.getElementById('splitSettleView').classList.add('hidden');
+}
+
+function showSettleUp() {
+  document.getElementById('splitListView').classList.add('hidden');
+  document.getElementById('splitNewView').classList.add('hidden');
+  document.getElementById('splitDetailView').classList.add('hidden');
+  document.getElementById('splitSettleView').classList.remove('hidden');
+  renderSettleUp();
 }
 
 function showNewReceipt() {
   document.getElementById('splitListView').classList.add('hidden');
   document.getElementById('splitNewView').classList.remove('hidden');
   document.getElementById('splitDetailView').classList.add('hidden');
+  document.getElementById('splitSettleView').classList.add('hidden');
   document.getElementById('receiptName').value = '';
   const payerSel = document.getElementById('receiptPayer');
   payerSel.innerHTML = CREW.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
@@ -2810,24 +2833,20 @@ function viewReceipt(id) {
   document.getElementById('splitListView').classList.add('hidden');
   document.getElementById('splitNewView').classList.add('hidden');
   document.getElementById('splitDetailView').classList.remove('hidden');
+  document.getElementById('splitSettleView').classList.add('hidden');
   renderReceiptDetail(receipt);
 }
 
-function renderReceiptDetail(receipt) {
-  const container = document.getElementById('receiptDetail');
-  const data = receipt.data || {};
+// Shared owes math: returns who owes the payer (before subtracting paid status)
+function computeReceiptOwes(data) {
   const items = data.items || [];
   const tax = parseFloat(data.tax) || 0;
   const tip = parseFloat(data.tip) || 0;
-  const payer = data.payer || 'Unknown';
-  const payments = data.payments || {};
   const subtotal = items.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
   const total = subtotal + tax + tip;
-
   const splitMode = data.splitMode || 'claim';
   const participants = data.participants || [];
 
-  // Calculate who owes what
   const owes = {};
   if (splitMode === 'even') {
     const share = participants.length ? total / participants.length : 0;
@@ -2846,11 +2865,96 @@ function renderReceiptDetail(receipt) {
         claims.forEach(name => { owes[name] = (owes[name] || 0) + split; });
       }
     });
-    // Add tax + tip share
-    Object.keys(owes).forEach(name => {
-      owes[name] += taxPerPerson + tipPerPerson;
-    });
+    Object.keys(owes).forEach(name => { owes[name] += taxPerPerson + tipPerPerson; });
   }
+  return { owes, subtotal, total, splitMode, participants };
+}
+
+// ===== SETTLE UP (consolidated who-owes-whom across all receipts) =====
+function renderSettleUp() {
+  const container = document.getElementById('settleContent');
+  // pairs[debtor][creditor] = { amount, receiptIds: [] }
+  const pairs = {};
+
+  (receipts || []).forEach(r => {
+    const data = r.data || {};
+    const payer = data.payer || 'Unknown';
+    const payments = data.payments || {};
+    const { owes } = computeReceiptOwes(data);
+    Object.entries(owes).forEach(([name, amount]) => {
+      if (name === payer) return;          // the payer doesn't owe themselves
+      if (amount <= 0) return;             // nothing owed
+      if (payments[name] === true) return; // already settled for this receipt
+      if (!pairs[name]) pairs[name] = {};
+      if (!pairs[name][payer]) pairs[name][payer] = { amount: 0, receiptIds: [] };
+      pairs[name][payer].amount += amount;
+      pairs[name][payer].receiptIds.push(r.id);
+    });
+  });
+
+  const debtors = Object.keys(pairs).sort((a, b) => a.localeCompare(b));
+  if (debtors.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="emoji">\ud83c\udf89</div><p>All settled up! No outstanding balances.</p></div>';
+    return;
+  }
+
+  // Put the logged-in user's block first for convenience
+  debtors.sort((a, b) => (a === currentUser ? -1 : b === currentUser ? 1 : 0));
+
+  container.innerHTML = debtors.map(debtor => {
+    const creditors = pairs[debtor];
+    const isMe = debtor === currentUser;
+    const rows = Object.entries(creditors)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([creditor, info]) => {
+        const url = venmoUrl(creditor);
+        const idsAttr = info.receiptIds.join(',');
+        return `<div class="owe-row">
+          <span class="owe-name">${esc(creditor)}</span>
+          <span class="owe-amount">$${info.amount.toFixed(2)}</span>
+          <div style="display:flex;gap:6px;">
+            ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener" class="paid-toggle" style="text-decoration:none;background:linear-gradient(135deg,var(--teal),var(--ocean));color:white;">Venmo</a>` : ''}
+            <button class="paid-toggle unpaid" onclick="markPairPaid('${esc(debtor)}','${esc(creditor)}','${idsAttr}')">Mark all paid</button>
+          </div>
+        </div>`;
+      }).join('');
+    const totalOwed = Object.values(creditors).reduce((s, i) => s + i.amount, 0);
+    return `<div class="settle-block" style="margin-bottom:16px;padding:14px;border:2px solid ${isMe ? 'var(--gold)' : 'var(--sand-dark)'};border-radius:var(--radius-md);background:${isMe ? 'var(--sand-light)' : 'white'};">
+      <div style="font-weight:700;color:var(--mahogany);margin-bottom:8px;">${isMe ? 'You owe' : esc(debtor) + ' owes'} <span style="float:right;color:var(--text-medium);">$${totalOwed.toFixed(2)} total</span></div>
+      ${rows}
+    </div>`;
+  }).join('');
+}
+
+// Mark every receipt behind a debtor->creditor pair as paid in one go
+async function markPairPaid(debtor, creditor, idsCsv) {
+  if (!confirm(`Mark ${debtor}'s balance to ${creditor} as fully paid?`)) return;
+  const ids = idsCsv.split(',').filter(Boolean);
+  try {
+    for (const id of ids) {
+      const receipt = receipts.find(r => String(r.id) === String(id));
+      if (!receipt) continue;
+      if (!receipt.data.payments) receipt.data.payments = {};
+      receipt.data.payments[debtor] = true;
+      await supaFetch('receipts', 'PATCH', { data: receipt.data }, `?id=eq.${id}`);
+    }
+    toast('Marked as paid');
+    renderSettleUp();
+  } catch (err) {
+    toast('Failed: ' + err.message, true);
+  }
+}
+
+function renderReceiptDetail(receipt) {
+  const container = document.getElementById('receiptDetail');
+  const data = receipt.data || {};
+  const items = data.items || [];
+  const tax = parseFloat(data.tax) || 0;
+  const tip = parseFloat(data.tip) || 0;
+  const payer = data.payer || 'Unknown';
+  const payments = data.payments || {};
+
+  const { owes, subtotal, total, splitMode, participants } = computeReceiptOwes(data);
 
   const pVenmo = venmoUrl(payer);
   const payerHtml = pVenmo
