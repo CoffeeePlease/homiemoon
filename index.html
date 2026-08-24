@@ -1666,7 +1666,7 @@ body::before {
       <div class="split-section">
         <button class="receipt-back" onclick="showReceiptList()">← Back to receipts</button>
         <h2>Settle Up</h2>
-        <p class="split-sub">Consolidated totals across every receipt. Already-paid amounts are excluded. Pay the one total, then tap “Mark all paid.”</p>
+        <p class="split-sub">Net balances across every receipt — mutual debts cancel out, so nobody double-pays. Already-settled amounts are excluded. Pay the net, then tap “Mark settled.”</p>
         <div id="settleContent"></div>
       </div>
     </div>
@@ -2870,11 +2870,21 @@ function computeReceiptOwes(data) {
   return { owes, subtotal, total, splitMode, participants };
 }
 
-// ===== SETTLE UP (consolidated who-owes-whom across all receipts) =====
+// ===== SETTLE UP (net who-owes-whom across all receipts) =====
+let settlePlans = {};
+
 function renderSettleUp() {
   const container = document.getElementById('settleContent');
-  // pairs[debtor][creditor] = { amount, receiptIds: [] }
-  const pairs = {};
+  settlePlans = {};
+
+  // gross[debtor][creditor] = { amount, entries:[{id, debtor}] }  (debtor owes creditor)
+  const gross = {};
+  function addGross(debtor, creditor, amount, receiptId) {
+    if (!gross[debtor]) gross[debtor] = {};
+    if (!gross[debtor][creditor]) gross[debtor][creditor] = { amount: 0, entries: [] };
+    gross[debtor][creditor].amount += amount;
+    gross[debtor][creditor].entries.push({ id: receiptId, debtor });
+  }
 
   (receipts || []).forEach(r => {
     const data = r.data || {};
@@ -2882,43 +2892,64 @@ function renderSettleUp() {
     const payments = data.payments || {};
     const { owes } = computeReceiptOwes(data);
     Object.entries(owes).forEach(([name, amount]) => {
-      if (name === payer) return;          // the payer doesn't owe themselves
+      if (name === payer) return;          // payer doesn't owe themselves
       if (amount <= 0) return;             // nothing owed
-      if (payments[name] === true) return; // already settled for this receipt
-      if (!pairs[name]) pairs[name] = {};
-      if (!pairs[name][payer]) pairs[name][payer] = { amount: 0, receiptIds: [] };
-      pairs[name][payer].amount += amount;
-      pairs[name][payer].receiptIds.push(r.id);
+      if (payments[name] === true) return; // already settled on this receipt
+      addGross(name, payer, amount, r.id); // 'name' owes 'payer'
     });
   });
 
-  const debtors = Object.keys(pairs).sort((a, b) => a.localeCompare(b));
-  if (debtors.length === 0) {
+  // Net each unordered pair so mutual debts cancel out
+  const netDebts = []; // { debtor, creditor, amount, entries }
+  const seen = new Set();
+  Object.keys(gross).forEach(a => {
+    Object.keys(gross[a]).forEach(b => {
+      const key = [a, b].sort().join('|');
+      if (seen.has(key)) return;
+      seen.add(key);
+      const ab = (gross[a] && gross[a][b]) || { amount: 0, entries: [] };
+      const ba = (gross[b] && gross[b][a]) || { amount: 0, entries: [] };
+      const net = ab.amount - ba.amount;
+      const entries = [...ab.entries, ...ba.entries]; // settling the net clears both directions
+      if (Math.abs(net) < 0.005) return; // perfectly even, nothing to pay
+      if (net > 0) netDebts.push({ debtor: a, creditor: b, amount: net, entries });
+      else netDebts.push({ debtor: b, creditor: a, amount: -net, entries });
+    });
+  });
+
+  if (netDebts.length === 0) {
     container.innerHTML = '<div class="empty-state"><div class="emoji">\ud83c\udf89</div><p>All settled up! No outstanding balances.</p></div>';
     return;
   }
 
-  // Put the logged-in user's block first for convenience
-  debtors.sort((a, b) => (a === currentUser ? -1 : b === currentUser ? 1 : 0));
+  // Group by debtor
+  const byDebtor = {};
+  netDebts.forEach(d => {
+    if (!byDebtor[d.debtor]) byDebtor[d.debtor] = [];
+    byDebtor[d.debtor].push(d);
+  });
 
+  const debtors = Object.keys(byDebtor).sort((a, b) => a.localeCompare(b));
+  debtors.sort((a, b) => (a === currentUser ? -1 : b === currentUser ? 1 : 0)); // me first
+
+  let planCounter = 0;
   container.innerHTML = debtors.map(debtor => {
-    const creditors = pairs[debtor];
     const isMe = debtor === currentUser;
-    const rows = Object.entries(creditors)
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([creditor, info]) => {
-        const url = venmoUrl(creditor);
-        const idsAttr = info.receiptIds.join(',');
-        return `<div class="owe-row">
-          <span class="owe-name">${esc(creditor)}</span>
-          <span class="owe-amount">$${info.amount.toFixed(2)}</span>
+    const list = byDebtor[debtor].sort((x, y) => x.creditor.localeCompare(y.creditor));
+    const rows = list.map(d => {
+      const url = venmoUrl(d.creditor);
+      const planKey = 'p' + (planCounter++);
+      settlePlans[planKey] = d.entries;
+      return `<div class="owe-row">
+          <span class="owe-name">${esc(d.creditor)}</span>
+          <span class="owe-amount">$${d.amount.toFixed(2)}</span>
           <div style="display:flex;gap:6px;">
             ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener" class="paid-toggle" style="text-decoration:none;background:linear-gradient(135deg,var(--teal),var(--ocean));color:white;">Venmo</a>` : ''}
-            <button class="paid-toggle unpaid" onclick="markPairPaid('${esc(debtor)}','${esc(creditor)}','${idsAttr}')">Mark all paid</button>
+            <button class="paid-toggle unpaid" onclick="markSettlement('${planKey}')">Mark settled</button>
           </div>
         </div>`;
-      }).join('');
-    const totalOwed = Object.values(creditors).reduce((s, i) => s + i.amount, 0);
+    }).join('');
+    const totalOwed = list.reduce((s, d) => s + d.amount, 0);
     return `<div class="settle-block" style="margin-bottom:16px;padding:14px;border:2px solid ${isMe ? 'var(--gold)' : 'var(--sand-dark)'};border-radius:var(--radius-md);background:${isMe ? 'var(--sand-light)' : 'white'};">
       <div style="font-weight:700;color:var(--mahogany);margin-bottom:8px;">${isMe ? 'You owe' : esc(debtor) + ' owes'} <span style="float:right;color:var(--text-medium);">$${totalOwed.toFixed(2)} total</span></div>
       ${rows}
@@ -2926,19 +2957,20 @@ function renderSettleUp() {
   }).join('');
 }
 
-// Mark every receipt behind a debtor->creditor pair as paid in one go
-async function markPairPaid(debtor, creditor, idsCsv) {
-  if (!confirm(`Mark ${debtor}'s balance to ${creditor} as fully paid?`)) return;
-  const ids = idsCsv.split(',').filter(Boolean);
+// Settle a netted balance: marks every underlying receipt (both directions) paid
+async function markSettlement(planKey) {
+  const entries = settlePlans[planKey];
+  if (!entries) return;
+  if (!confirm('Mark this balance as settled? This clears the underlying receipts for both people.')) return;
   try {
-    for (const id of ids) {
-      const receipt = receipts.find(r => String(r.id) === String(id));
+    for (const e of entries) {
+      const receipt = receipts.find(r => String(r.id) === String(e.id));
       if (!receipt) continue;
       if (!receipt.data.payments) receipt.data.payments = {};
-      receipt.data.payments[debtor] = true;
-      await supaFetch('receipts', 'PATCH', { data: receipt.data }, `?id=eq.${id}`);
+      receipt.data.payments[e.debtor] = true;
+      await supaFetch('receipts', 'PATCH', { data: receipt.data }, `?id=eq.${e.id}`);
     }
-    toast('Marked as paid');
+    toast('Settled!');
     renderSettleUp();
   } catch (err) {
     toast('Failed: ' + err.message, true);
