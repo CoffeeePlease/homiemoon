@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1722,6 +1723,7 @@ body::before {
         </div>
 
         <h3 style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--mahogany);margin:16px 0 8px;">Line Items</h3>
+        <p style="font-size:0.72rem;color:var(--text-light);margin-bottom:8px;">If more than one person ordered the same thing (e.g. 2 steaks), set the quantity — each one becomes its own claimable item.</p>
         <div class="manual-form" id="lineItemsForm"></div>
         <button onclick="addManualLineItem()" style="padding:8px 14px;background:var(--teal);color:white;border:none;border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;font-size:0.82rem;margin-bottom:16px;">+ Add Item</button>
 
@@ -2552,7 +2554,7 @@ function showNewReceipt() {
   document.getElementById('receiptTip').value = '0';
   document.getElementById('receiptPreview').style.display = 'none';
   document.getElementById('receiptProcessing').classList.add('hidden');
-  tempLineItems = [{ name: '', price: '' }];
+  tempLineItems = [{ name: '', price: '', qty: 1 }];
   tempReceiptPhotoUrl = null;
   renderCrewChecklist();
   setSplitMode('claim');
@@ -2680,14 +2682,15 @@ function renderLineItemsForm() {
   form.innerHTML = tempLineItems.map((item, i) => `
     <div class="manual-form mf-row">
       <input type="text" placeholder="Item name" value="${esc(item.name)}" onchange="tempLineItems[${i}].name=this.value">
-      <input type="number" step="0.01" min="0" placeholder="$0.00" value="${item.price}" onchange="tempLineItems[${i}].price=this.value;updateEvenSplitPreview()">
+      <input type="number" min="1" step="1" placeholder="Qty" value="${item.qty || 1}" title="How many people ordered this exact item" style="width:64px" onchange="tempLineItems[${i}].qty=this.value">
+      <input type="number" step="0.01" min="0" placeholder="$0.00 total" value="${item.price}" title="Total price for this line (all quantity combined)" onchange="tempLineItems[${i}].price=this.value;updateEvenSplitPreview()">
       <button class="mf-remove" onclick="tempLineItems.splice(${i},1);renderLineItemsForm()">✕</button>
     </div>
   `).join('');
 }
 
 function addManualLineItem() {
-  tempLineItems.push({ name: '', price: '' });
+  tempLineItems.push({ name: '', price: '', qty: 1 });
   renderLineItemsForm();
 }
 
@@ -2760,12 +2763,15 @@ async function processReceiptImage(file) {
 
       const parsed = await response.json();
 
-      // Populate form
+      // Populate form. If the scanner returned a quantity for a line (e.g. "2x Mai Tai"),
+      // keep the qty on the row so the user can review/adjust it before saving — the actual
+      // split into individually-claimable items happens in saveReceipt().
       tempLineItems = (parsed.items || []).map(i => ({
         name: i.name || '',
-        price: parseFloat(i.price) || 0
+        price: parseFloat(i.price) || 0,
+        qty: parseInt(i.quantity) || parseInt(i.qty) || 1
       }));
-      if (tempLineItems.length === 0) tempLineItems = [{ name: '', price: '' }];
+      if (tempLineItems.length === 0) tempLineItems = [{ name: '', price: '', qty: 1 }];
 
       if (parsed.tax) document.getElementById('receiptTax').value = parseFloat(parsed.tax) || 0;
       if (parsed.tip) document.getElementById('receiptTip').value = parseFloat(parsed.tip) || 0;
@@ -2774,7 +2780,7 @@ async function processReceiptImage(file) {
       }
 
       renderLineItemsForm();
-      toast('Receipt read! Check the items below 🧾');
+      toast('Receipt read! Check the items (and quantities) below 🧾');
     } catch (err) {
       toast('Receipt scan failed: ' + err.message, true);
       console.error('Receipt parse error:', err);
@@ -2791,9 +2797,23 @@ async function saveReceipt() {
   if (!name) return toast('Give this receipt a name', true);
   if (!payer) return toast('Who paid?', true);
 
-  const items = tempLineItems
-    .filter(i => i.name && i.price)
-    .map(i => ({ name: i.name.trim(), price: parseFloat(i.price) || 0, claims: [] }));
+  // Explode any line with qty > 1 into that many separate, individually-claimable items.
+  // "price" on a line is treated as the LINE TOTAL (what's printed for that quantity),
+  // so each exploded unit gets an equal share of it.
+  const items = [];
+  tempLineItems.forEach(i => {
+    if (!i.name || !i.price) return;
+    const qty = Math.max(1, parseInt(i.qty) || 1);
+    const lineTotal = parseFloat(i.price) || 0;
+    const unitPrice = lineTotal / qty;
+    for (let n = 0; n < qty; n++) {
+      items.push({
+        name: qty > 1 ? `${i.name.trim()} (${n + 1}/${qty})` : i.name.trim(),
+        price: unitPrice,
+        claims: []
+      });
+    }
+  });
 
   if (items.length === 0) return toast('Add at least one item', true);
 
