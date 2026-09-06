@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1655,10 +1654,21 @@ body::before {
         <h2>Split the Bill</h2>
         <p class="split-sub">Upload a receipt or enter items manually. Claim what you ordered, or split the whole total evenly between the crew.</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="split-new-btn" onclick="showNewReceipt()" style="flex:1;min-width:140px;">+ New Receipt</button>
-          <button class="split-new-btn" onclick="showSettleUp()" style="flex:1;min-width:140px;background:linear-gradient(135deg,var(--teal),var(--ocean));">Settle Up</button>
+          <button class="split-new-btn" onclick="showNewReceipt()" style="flex:1;min-width:130px;">+ New Receipt</button>
+          <button class="split-new-btn" onclick="showSettleUp()" style="flex:1;min-width:130px;background:linear-gradient(135deg,var(--teal),var(--ocean));">Settle Up</button>
+          <button class="split-new-btn" onclick="showSummary()" style="flex:1;min-width:130px;background:linear-gradient(135deg,var(--mahogany),var(--mahogany-light));">Summary</button>
         </div>
         <div class="receipt-list" id="receiptList"></div>
+      </div>
+    </div>
+
+    <!-- Summary (full per-person ledger for validation) -->
+    <div id="splitSummaryView" class="hidden">
+      <div class="split-section">
+        <button class="receipt-back" onclick="showReceiptList()">← Back to receipts</button>
+        <h2>Summary</h2>
+        <p class="split-sub">Full itemized breakdown per person — every share across every receipt, marked Paid or Outstanding. Nothing netted, so anyone can validate their own line by line.</p>
+        <div id="summaryContent"></div>
       </div>
     </div>
 
@@ -1723,7 +1733,6 @@ body::before {
         </div>
 
         <h3 style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--mahogany);margin:16px 0 8px;">Line Items</h3>
-        <p style="font-size:0.72rem;color:var(--text-light);margin-bottom:8px;">If more than one person ordered the same thing (e.g. 2 steaks), set the quantity — each one becomes its own claimable item.</p>
         <div class="manual-form" id="lineItemsForm"></div>
         <button onclick="addManualLineItem()" style="padding:8px 14px;background:var(--teal);color:white;border:none;border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;font-size:0.82rem;margin-bottom:16px;">+ Add Item</button>
 
@@ -2526,26 +2535,31 @@ async function loadReceipts() {
   }
 }
 
+function hideAllSplitViews() {
+  ['splitListView', 'splitNewView', 'splitDetailView', 'splitSettleView', 'splitSummaryView']
+    .forEach(id => document.getElementById(id).classList.add('hidden'));
+}
+
 function showReceiptList() {
+  hideAllSplitViews();
   document.getElementById('splitListView').classList.remove('hidden');
-  document.getElementById('splitNewView').classList.add('hidden');
-  document.getElementById('splitDetailView').classList.add('hidden');
-  document.getElementById('splitSettleView').classList.add('hidden');
 }
 
 function showSettleUp() {
-  document.getElementById('splitListView').classList.add('hidden');
-  document.getElementById('splitNewView').classList.add('hidden');
-  document.getElementById('splitDetailView').classList.add('hidden');
+  hideAllSplitViews();
   document.getElementById('splitSettleView').classList.remove('hidden');
   renderSettleUp();
 }
 
+function showSummary() {
+  hideAllSplitViews();
+  document.getElementById('splitSummaryView').classList.remove('hidden');
+  renderSummary();
+}
+
 function showNewReceipt() {
-  document.getElementById('splitListView').classList.add('hidden');
+  hideAllSplitViews();
   document.getElementById('splitNewView').classList.remove('hidden');
-  document.getElementById('splitDetailView').classList.add('hidden');
-  document.getElementById('splitSettleView').classList.add('hidden');
   document.getElementById('receiptName').value = '';
   const payerSel = document.getElementById('receiptPayer');
   payerSel.innerHTML = CREW.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
@@ -2554,7 +2568,7 @@ function showNewReceipt() {
   document.getElementById('receiptTip').value = '0';
   document.getElementById('receiptPreview').style.display = 'none';
   document.getElementById('receiptProcessing').classList.add('hidden');
-  tempLineItems = [{ name: '', price: '', qty: 1 }];
+  tempLineItems = [{ name: '', price: '' }];
   tempReceiptPhotoUrl = null;
   renderCrewChecklist();
   setSplitMode('claim');
@@ -2682,15 +2696,14 @@ function renderLineItemsForm() {
   form.innerHTML = tempLineItems.map((item, i) => `
     <div class="manual-form mf-row">
       <input type="text" placeholder="Item name" value="${esc(item.name)}" onchange="tempLineItems[${i}].name=this.value">
-      <input type="number" min="1" step="1" placeholder="Qty" value="${item.qty || 1}" title="How many people ordered this exact item" style="width:64px" onchange="tempLineItems[${i}].qty=this.value">
-      <input type="number" step="0.01" min="0" placeholder="$0.00 total" value="${item.price}" title="Total price for this line (all quantity combined)" onchange="tempLineItems[${i}].price=this.value;updateEvenSplitPreview()">
+      <input type="number" step="0.01" min="0" placeholder="$0.00" value="${item.price}" onchange="tempLineItems[${i}].price=this.value;updateEvenSplitPreview()">
       <button class="mf-remove" onclick="tempLineItems.splice(${i},1);renderLineItemsForm()">✕</button>
     </div>
   `).join('');
 }
 
 function addManualLineItem() {
-  tempLineItems.push({ name: '', price: '', qty: 1 });
+  tempLineItems.push({ name: '', price: '' });
   renderLineItemsForm();
 }
 
@@ -2763,15 +2776,12 @@ async function processReceiptImage(file) {
 
       const parsed = await response.json();
 
-      // Populate form. If the scanner returned a quantity for a line (e.g. "2x Mai Tai"),
-      // keep the qty on the row so the user can review/adjust it before saving — the actual
-      // split into individually-claimable items happens in saveReceipt().
+      // Populate form
       tempLineItems = (parsed.items || []).map(i => ({
         name: i.name || '',
-        price: parseFloat(i.price) || 0,
-        qty: parseInt(i.quantity) || parseInt(i.qty) || 1
+        price: parseFloat(i.price) || 0
       }));
-      if (tempLineItems.length === 0) tempLineItems = [{ name: '', price: '', qty: 1 }];
+      if (tempLineItems.length === 0) tempLineItems = [{ name: '', price: '' }];
 
       if (parsed.tax) document.getElementById('receiptTax').value = parseFloat(parsed.tax) || 0;
       if (parsed.tip) document.getElementById('receiptTip').value = parseFloat(parsed.tip) || 0;
@@ -2780,7 +2790,7 @@ async function processReceiptImage(file) {
       }
 
       renderLineItemsForm();
-      toast('Receipt read! Check the items (and quantities) below 🧾');
+      toast('Receipt read! Check the items below 🧾');
     } catch (err) {
       toast('Receipt scan failed: ' + err.message, true);
       console.error('Receipt parse error:', err);
@@ -2797,23 +2807,9 @@ async function saveReceipt() {
   if (!name) return toast('Give this receipt a name', true);
   if (!payer) return toast('Who paid?', true);
 
-  // Explode any line with qty > 1 into that many separate, individually-claimable items.
-  // "price" on a line is treated as the LINE TOTAL (what's printed for that quantity),
-  // so each exploded unit gets an equal share of it.
-  const items = [];
-  tempLineItems.forEach(i => {
-    if (!i.name || !i.price) return;
-    const qty = Math.max(1, parseInt(i.qty) || 1);
-    const lineTotal = parseFloat(i.price) || 0;
-    const unitPrice = lineTotal / qty;
-    for (let n = 0; n < qty; n++) {
-      items.push({
-        name: qty > 1 ? `${i.name.trim()} (${n + 1}/${qty})` : i.name.trim(),
-        price: unitPrice,
-        claims: []
-      });
-    }
-  });
+  const items = tempLineItems
+    .filter(i => i.name && i.price)
+    .map(i => ({ name: i.name.trim(), price: parseFloat(i.price) || 0, claims: [] }));
 
   if (items.length === 0) return toast('Add at least one item', true);
 
@@ -2850,10 +2846,8 @@ async function saveReceipt() {
 function viewReceipt(id) {
   const receipt = receipts.find(r => r.id === id);
   if (!receipt) return;
-  document.getElementById('splitListView').classList.add('hidden');
-  document.getElementById('splitNewView').classList.add('hidden');
+  hideAllSplitViews();
   document.getElementById('splitDetailView').classList.remove('hidden');
-  document.getElementById('splitSettleView').classList.add('hidden');
   renderReceiptDetail(receipt);
 }
 
@@ -2892,18 +2886,22 @@ function computeReceiptOwes(data) {
 
 // ===== SETTLE UP (net who-owes-whom across all receipts) =====
 let settlePlans = {};
+let reopenPlans = {};
 
 function renderSettleUp() {
   const container = document.getElementById('settleContent');
   settlePlans = {};
+  reopenPlans = {};
 
-  // gross[debtor][creditor] = { amount, entries:[{id, debtor}] }  (debtor owes creditor)
+  // gross[debtor][creditor] = { amount, entries:[{id,debtor,creditor,amount,name}] }  (unpaid only)
   const gross = {};
-  function addGross(debtor, creditor, amount, receiptId) {
+  const settledByPair = {}; // 'A|B' -> [{id,debtor,creditor,amount,name}]
+
+  function addGross(debtor, creditor, amount, r) {
     if (!gross[debtor]) gross[debtor] = {};
     if (!gross[debtor][creditor]) gross[debtor][creditor] = { amount: 0, entries: [] };
     gross[debtor][creditor].amount += amount;
-    gross[debtor][creditor].entries.push({ id: receiptId, debtor });
+    gross[debtor][creditor].entries.push({ id: r.id, debtor, creditor, amount, name: r.name });
   }
 
   (receipts || []).forEach(r => {
@@ -2912,15 +2910,20 @@ function renderSettleUp() {
     const payments = data.payments || {};
     const { owes } = computeReceiptOwes(data);
     Object.entries(owes).forEach(([name, amount]) => {
-      if (name === payer) return;          // payer doesn't owe themselves
-      if (amount <= 0) return;             // nothing owed
-      if (payments[name] === true) return; // already settled on this receipt
-      addGross(name, payer, amount, r.id); // 'name' owes 'payer'
+      if (name === payer) return;
+      if (amount <= 0) return;
+      if (payments[name] === true) {
+        const pk = [name, payer].sort().join('|');
+        if (!settledByPair[pk]) settledByPair[pk] = [];
+        settledByPair[pk].push({ id: r.id, debtor: name, creditor: payer, amount, name: r.name });
+      } else {
+        addGross(name, payer, amount, r);
+      }
     });
   });
 
   // Net each unordered pair so mutual debts cancel out
-  const netDebts = []; // { debtor, creditor, amount, entries }
+  const netDebts = [];
   const seen = new Set();
   Object.keys(gross).forEach(a => {
     Object.keys(gross[a]).forEach(b => {
@@ -2930,37 +2933,32 @@ function renderSettleUp() {
       const ab = (gross[a] && gross[a][b]) || { amount: 0, entries: [] };
       const ba = (gross[b] && gross[b][a]) || { amount: 0, entries: [] };
       const net = ab.amount - ba.amount;
-      const entries = [...ab.entries, ...ba.entries]; // settling the net clears both directions
-      if (Math.abs(net) < 0.005) return; // perfectly even, nothing to pay
+      const entries = [...ab.entries, ...ba.entries];
+      if (Math.abs(net) < 0.005) return;
       if (net > 0) netDebts.push({ debtor: a, creditor: b, amount: net, entries });
       else netDebts.push({ debtor: b, creditor: a, amount: -net, entries });
     });
   });
 
+  // ----- Outstanding section -----
+  let outstandingHtml;
   if (netDebts.length === 0) {
-    container.innerHTML = '<div class="empty-state"><div class="emoji">\ud83c\udf89</div><p>All settled up! No outstanding balances.</p></div>';
-    return;
-  }
+    outstandingHtml = '<div class="empty-state"><div class="emoji">\ud83c\udf89</div><p>Nothing outstanding — everyone is square!</p></div>';
+  } else {
+    const byDebtor = {};
+    netDebts.forEach(d => { (byDebtor[d.debtor] = byDebtor[d.debtor] || []).push(d); });
+    const debtors = Object.keys(byDebtor).sort((a, b) => a.localeCompare(b));
+    debtors.sort((a, b) => (a === currentUser ? -1 : b === currentUser ? 1 : 0));
 
-  // Group by debtor
-  const byDebtor = {};
-  netDebts.forEach(d => {
-    if (!byDebtor[d.debtor]) byDebtor[d.debtor] = [];
-    byDebtor[d.debtor].push(d);
-  });
-
-  const debtors = Object.keys(byDebtor).sort((a, b) => a.localeCompare(b));
-  debtors.sort((a, b) => (a === currentUser ? -1 : b === currentUser ? 1 : 0)); // me first
-
-  let planCounter = 0;
-  container.innerHTML = debtors.map(debtor => {
-    const isMe = debtor === currentUser;
-    const list = byDebtor[debtor].sort((x, y) => x.creditor.localeCompare(y.creditor));
-    const rows = list.map(d => {
-      const url = venmoUrl(d.creditor);
-      const planKey = 'p' + (planCounter++);
-      settlePlans[planKey] = d.entries;
-      return `<div class="owe-row">
+    let planCounter = 0;
+    outstandingHtml = debtors.map(debtor => {
+      const isMe = debtor === currentUser;
+      const list = byDebtor[debtor].sort((x, y) => x.creditor.localeCompare(y.creditor));
+      const rows = list.map(d => {
+        const url = venmoUrl(d.creditor);
+        const planKey = 'p' + (planCounter++);
+        settlePlans[planKey] = d.entries;
+        return `<div class="owe-row">
           <span class="owe-name">${esc(d.creditor)}</span>
           <span class="owe-amount">$${d.amount.toFixed(2)}</span>
           <div style="display:flex;gap:6px;">
@@ -2968,20 +2966,51 @@ function renderSettleUp() {
             <button class="paid-toggle unpaid" onclick="markSettlement('${planKey}')">Mark settled</button>
           </div>
         </div>`;
+      }).join('');
+      const totalOwed = list.reduce((s, d) => s + d.amount, 0);
+      return `<div class="settle-block" style="margin-bottom:16px;padding:14px;border:2px solid ${isMe ? 'var(--gold)' : 'var(--sand-dark)'};border-radius:var(--radius-md);background:${isMe ? 'var(--sand-light)' : 'white'};">
+        <div style="font-weight:700;color:var(--mahogany);margin-bottom:8px;">${isMe ? 'You owe' : esc(debtor) + ' owes'} <span style="float:right;color:var(--text-medium);">$${totalOwed.toFixed(2)} total</span></div>
+        ${rows}
+      </div>`;
     }).join('');
-    const totalOwed = list.reduce((s, d) => s + d.amount, 0);
-    return `<div class="settle-block" style="margin-bottom:16px;padding:14px;border:2px solid ${isMe ? 'var(--gold)' : 'var(--sand-dark)'};border-radius:var(--radius-md);background:${isMe ? 'var(--sand-light)' : 'white'};">
-      <div style="font-weight:700;color:var(--mahogany);margin-bottom:8px;">${isMe ? 'You owe' : esc(debtor) + ' owes'} <span style="float:right;color:var(--text-medium);">$${totalOwed.toFixed(2)} total</span></div>
-      ${rows}
-    </div>`;
-  }).join('');
+  }
+
+  // ----- Settled section (collapsible, with reopen) -----
+  const settledKeys = Object.keys(settledByPair).sort();
+  let settledHtml = '';
+  if (settledKeys.length) {
+    let rc = 0;
+    const blocks = settledKeys.map(pk => {
+      const entries = settledByPair[pk].sort((x, y) => x.name.localeCompare(y.name));
+      const [a, b] = pk.split('|');
+      const total = entries.reduce((s, e) => s + e.amount, 0);
+      const planKey = 'r' + (rc++);
+      reopenPlans[planKey] = entries.map(e => ({ id: e.id, debtor: e.debtor }));
+      const rows = entries.map(e => `
+        <div class="owe-row">
+          <span class="owe-name" style="font-size:0.85rem;">${esc(e.name)}<br><span style="color:var(--text-light);font-size:0.75rem;">${esc(e.debtor)} → ${esc(e.creditor)} · $${e.amount.toFixed(2)}</span></span>
+          <button class="paid-toggle paid" onclick="reopenReceipt('${e.id}','${esc(e.debtor)}')">Reopen</button>
+        </div>`).join('');
+      return `<div class="settle-block" style="margin-bottom:12px;padding:14px;border:2px solid var(--sand-dark);border-radius:var(--radius-md);background:white;">
+        <div style="font-weight:700;color:var(--text-medium);margin-bottom:8px;">${esc(a)} &amp; ${esc(b)} <span style="float:right;">$${total.toFixed(2)} settled</span></div>
+        ${rows}
+        <button class="paid-toggle unpaid" style="margin-top:8px;width:100%;" onclick="reopenPairAll('${planKey}')">Reopen all for this pair</button>
+      </div>`;
+    }).join('');
+    settledHtml = `<details style="margin-top:20px;"><summary style="cursor:pointer;font-weight:700;color:var(--mahogany);padding:8px 0;">Settled balances (tap to view / undo)</summary><div style="margin-top:10px;">${blocks}</div></details>`;
+  }
+
+  container.innerHTML = outstandingHtml + settledHtml;
 }
 
-// Settle a netted balance: marks every underlying receipt (both directions) paid
+// Settle a netted balance: marks every underlying receipt (both directions) paid,
+// after showing exactly which receipt-shares will be affected.
 async function markSettlement(planKey) {
   const entries = settlePlans[planKey];
-  if (!entries) return;
-  if (!confirm('Mark this balance as settled? This clears the underlying receipts for both people.')) return;
+  if (!entries || !entries.length) return;
+  const lines = entries.map(e => `\u2022 ${e.name}: ${e.debtor} \u2192 ${e.creditor}  $${e.amount.toFixed(2)}`);
+  const msg = `Mark settled? This flags the following ${entries.length} receipt-share(s) as paid:\n\n${lines.join('\n')}\n\nYou can undo any of these later under “Settled balances.”`;
+  if (!confirm(msg)) return;
   try {
     for (const e of entries) {
       const receipt = receipts.find(r => String(r.id) === String(e.id));
@@ -2995,6 +3024,100 @@ async function markSettlement(planKey) {
   } catch (err) {
     toast('Failed: ' + err.message, true);
   }
+}
+
+// Reopen a single settled receipt-share
+async function reopenReceipt(id, debtor) {
+  const receipt = receipts.find(r => String(r.id) === String(id));
+  if (!receipt) return;
+  if (!receipt.data.payments) receipt.data.payments = {};
+  receipt.data.payments[debtor] = false;
+  try {
+    await supaFetch('receipts', 'PATCH', { data: receipt.data }, `?id=eq.${id}`);
+    toast('Reopened');
+    renderSettleUp();
+  } catch (err) {
+    toast('Failed: ' + err.message, true);
+  }
+}
+
+// Reopen every settled receipt-share for a pair
+async function reopenPairAll(planKey) {
+  const entries = reopenPlans[planKey];
+  if (!entries || !entries.length) return;
+  if (!confirm(`Reopen all ${entries.length} settled item(s) for this pair? They'll show as owed again.`)) return;
+  try {
+    for (const e of entries) {
+      const receipt = receipts.find(r => String(r.id) === String(e.id));
+      if (!receipt) continue;
+      if (!receipt.data.payments) receipt.data.payments = {};
+      receipt.data.payments[e.debtor] = false;
+      await supaFetch('receipts', 'PATCH', { data: receipt.data }, `?id=eq.${e.id}`);
+    }
+    toast('Reopened');
+    renderSettleUp();
+  } catch (err) {
+    toast('Failed: ' + err.message, true);
+  }
+}
+
+// ===== SUMMARY (full itemized per-person ledger for validation) =====
+function renderSummary() {
+  const container = document.getElementById('summaryContent');
+  const debts = [];
+  (receipts || []).forEach(r => {
+    const data = r.data || {};
+    const payer = data.payer || 'Unknown';
+    const payments = data.payments || {};
+    const { owes } = computeReceiptOwes(data);
+    Object.entries(owes).forEach(([name, amount]) => {
+      if (name === payer) return;
+      if (amount <= 0) return;
+      debts.push({ debtor: name, creditor: payer, amount, receipt: r.name, paid: payments[name] === true });
+    });
+  });
+
+  if (debts.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="emoji">\ud83e\uddfe</div><p>No shared costs yet.</p></div>';
+    return;
+  }
+
+  const people = [...new Set([...debts.map(d => d.debtor), ...debts.map(d => d.creditor)])];
+  people.sort((a, b) => a.localeCompare(b));
+  people.sort((a, b) => (a === currentUser ? -1 : b === currentUser ? 1 : 0));
+
+  const tag = paid => paid
+    ? '<span style="font-size:0.68rem;font-weight:700;color:var(--teal);background:#e5f2f0;padding:2px 8px;border-radius:999px;white-space:nowrap;">PAID</span>'
+    : '<span style="font-size:0.68rem;font-weight:700;color:var(--sunset);background:#fbeee4;padding:2px 8px;border-radius:999px;white-space:nowrap;">OWED</span>';
+
+  container.innerHTML = people.map(p => {
+    const isMe = p === currentUser;
+    const owesList = debts.filter(d => d.debtor === p).sort((a, b) => a.creditor.localeCompare(b.creditor));
+    const owedList = debts.filter(d => d.creditor === p).sort((a, b) => a.debtor.localeCompare(b.debtor));
+    const owesOut = owesList.filter(d => !d.paid).reduce((s, d) => s + d.amount, 0);
+    const owedOut = owedList.filter(d => !d.paid).reduce((s, d) => s + d.amount, 0);
+
+    const row = (who, d) => `<div class="owe-row">
+        <span class="owe-name" style="font-size:0.85rem;">${who} <span style="color:var(--text-light);">\u00b7 ${esc(d.receipt)}</span></span>
+        <span class="owe-amount">$${d.amount.toFixed(2)}</span>
+        ${tag(d.paid)}
+      </div>`;
+
+    const owesRows = owesList.length
+      ? owesList.map(d => row('to ' + esc(d.creditor), d)).join('')
+      : '<p style="font-size:0.8rem;color:var(--text-light);padding:4px 0;">Owes nothing.</p>';
+    const owedRows = owedList.length
+      ? owedList.map(d => row(esc(d.debtor), d)).join('')
+      : '<p style="font-size:0.8rem;color:var(--text-light);padding:4px 0;">Nobody owes them.</p>';
+
+    return `<div class="settle-block" style="margin-bottom:16px;padding:14px;border:2px solid ${isMe ? 'var(--gold)' : 'var(--sand-dark)'};border-radius:var(--radius-md);background:${isMe ? 'var(--sand-light)' : 'white'};">
+      <div style="font-weight:800;color:var(--mahogany);font-size:1.05rem;margin-bottom:10px;">${isMe ? 'You' : esc(p)}</div>
+      <div style="font-weight:700;color:var(--text-medium);font-size:0.8rem;margin:6px 0 4px;">${isMe ? 'You owe' : 'Owes'} <span style="float:right;color:var(--sunset);">$${owesOut.toFixed(2)} outstanding</span></div>
+      ${owesRows}
+      <div style="font-weight:700;color:var(--text-medium);font-size:0.8rem;margin:12px 0 4px;">${isMe ? "You're owed" : 'Owed to them'} <span style="float:right;color:var(--teal);">$${owedOut.toFixed(2)} outstanding</span></div>
+      ${owedRows}
+    </div>`;
+  }).join('');
 }
 
 function renderReceiptDetail(receipt) {
