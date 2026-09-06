@@ -1654,21 +1654,10 @@ body::before {
         <h2>Split the Bill</h2>
         <p class="split-sub">Upload a receipt or enter items manually. Claim what you ordered, or split the whole total evenly between the crew.</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="split-new-btn" onclick="showNewReceipt()" style="flex:1;min-width:130px;">+ New Receipt</button>
-          <button class="split-new-btn" onclick="showSettleUp()" style="flex:1;min-width:130px;background:linear-gradient(135deg,var(--teal),var(--ocean));">Settle Up</button>
-          <button class="split-new-btn" onclick="showSummary()" style="flex:1;min-width:130px;background:linear-gradient(135deg,var(--mahogany),var(--mahogany-light));">Summary</button>
+          <button class="split-new-btn" onclick="showNewReceipt()" style="flex:1;min-width:140px;">+ New Receipt</button>
+          <button class="split-new-btn" onclick="showSettleUp()" style="flex:1;min-width:140px;background:linear-gradient(135deg,var(--teal),var(--ocean));">Settle Up</button>
         </div>
         <div class="receipt-list" id="receiptList"></div>
-      </div>
-    </div>
-
-    <!-- Summary (full per-person ledger for validation) -->
-    <div id="splitSummaryView" class="hidden">
-      <div class="split-section">
-        <button class="receipt-back" onclick="showReceiptList()">← Back to receipts</button>
-        <h2>Summary</h2>
-        <p class="split-sub">Full itemized breakdown per person — every share across every receipt, marked Paid or Outstanding. Nothing netted, so anyone can validate their own line by line.</p>
-        <div id="summaryContent"></div>
       </div>
     </div>
 
@@ -2536,7 +2525,7 @@ async function loadReceipts() {
 }
 
 function hideAllSplitViews() {
-  ['splitListView', 'splitNewView', 'splitDetailView', 'splitSettleView', 'splitSummaryView']
+  ['splitListView', 'splitNewView', 'splitDetailView', 'splitSettleView']
     .forEach(id => document.getElementById(id).classList.add('hidden'));
 }
 
@@ -2549,12 +2538,6 @@ function showSettleUp() {
   hideAllSplitViews();
   document.getElementById('splitSettleView').classList.remove('hidden');
   renderSettleUp();
-}
-
-function showSummary() {
-  hideAllSplitViews();
-  document.getElementById('splitSummaryView').classList.remove('hidden');
-  renderSummary();
 }
 
 function showNewReceipt() {
@@ -2895,7 +2878,6 @@ function renderSettleUp() {
 
   // gross[debtor][creditor] = { amount, entries:[{id,debtor,creditor,amount,name}] }  (unpaid only)
   const gross = {};
-  const settledByPair = {}; // 'A|B' -> [{id,debtor,creditor,amount,name}]
 
   function addGross(debtor, creditor, amount, r) {
     if (!gross[debtor]) gross[debtor] = {};
@@ -2912,13 +2894,8 @@ function renderSettleUp() {
     Object.entries(owes).forEach(([name, amount]) => {
       if (name === payer) return;
       if (amount <= 0) return;
-      if (payments[name] === true) {
-        const pk = [name, payer].sort().join('|');
-        if (!settledByPair[pk]) settledByPair[pk] = [];
-        settledByPair[pk].push({ id: r.id, debtor: name, creditor: payer, amount, name: r.name });
-      } else {
-        addGross(name, payer, amount, r);
-      }
+      if (payments[name] === true) return; // settled - shown in the per-person accordion below
+      addGross(name, payer, amount, r);
     });
   });
 
@@ -2975,30 +2952,93 @@ function renderSettleUp() {
     }).join('');
   }
 
-  // ----- Settled section (collapsible, with reopen) -----
-  const settledKeys = Object.keys(settledByPair).sort();
-  let settledHtml = '';
-  if (settledKeys.length) {
-    let rc = 0;
-    const blocks = settledKeys.map(pk => {
-      const entries = settledByPair[pk].sort((x, y) => x.name.localeCompare(y.name));
-      const [a, b] = pk.split('|');
-      const total = entries.reduce((s, e) => s + e.amount, 0);
-      const planKey = 'r' + (rc++);
-      reopenPlans[planKey] = entries.map(e => ({ id: e.id, debtor: e.debtor }));
-      const rows = entries.map(e => `
-        <div class="owe-row">
-          <span class="owe-name" style="font-size:0.85rem;">${esc(e.name)}<br><span style="color:var(--text-light);font-size:0.75rem;">${esc(e.debtor)} → ${esc(e.creditor)} · $${e.amount.toFixed(2)}</span></span>
-          <button class="paid-toggle paid" onclick="reopenReceipt('${e.id}','${esc(e.debtor)}')">Reopen</button>
-        </div>`).join('');
-      return `<div class="settle-block" style="margin-bottom:12px;padding:14px;border:2px solid var(--sand-dark);border-radius:var(--radius-md);background:white;">
-        <div style="font-weight:700;color:var(--text-medium);margin-bottom:8px;">${esc(a)} &amp; ${esc(b)} <span style="float:right;">$${total.toFixed(2)} settled</span></div>
-        ${rows}
-        <button class="paid-toggle unpaid" style="margin-top:8px;width:100%;" onclick="reopenPairAll('${planKey}')">Reopen all for this pair</button>
+  // ----- Per-person accordion: net consolidation + settled history -----
+  const debts = [];
+  (receipts || []).forEach(r => {
+    const data = r.data || {};
+    const payer = data.payer || 'Unknown';
+    const payments = data.payments || {};
+    const { owes } = computeReceiptOwes(data);
+    Object.entries(owes).forEach(([name, amount]) => {
+      if (name === payer) return;
+      if (amount <= 0) return;
+      debts.push({ id: r.id, debtor: name, creditor: payer, amount, receipt: r.name, paid: payments[name] === true });
+    });
+  });
+
+  const people = [...new Set([...debts.map(d => d.debtor), ...debts.map(d => d.creditor)])]
+    .sort((a, b) => a.localeCompare(b));
+  people.sort((a, b) => (a === currentUser ? -1 : b === currentUser ? 1 : 0));
+
+  let rc = 0;
+  const personBlocks = people.map(p => {
+    const isMe = p === currentUser;
+    const others = [...new Set(
+      debts.filter(d => d.debtor === p || d.creditor === p)
+           .map(d => (d.debtor === p ? d.creditor : d.debtor))
+    )].sort((a, b) => a.localeCompare(b));
+
+    let netTotal = 0; // >0 => p owes overall (outstanding)
+    const rows = others.map(q => {
+      const oweUnpaid  = debts.filter(d => d.debtor === p && d.creditor === q && !d.paid).reduce((s, d) => s + d.amount, 0);
+      const owedUnpaid = debts.filter(d => d.debtor === q && d.creditor === p && !d.paid).reduce((s, d) => s + d.amount, 0);
+      const netUnpaid = oweUnpaid - owedUnpaid;
+      netTotal += netUnpaid;
+
+      const settledEntries = debts.filter(d => d.paid &&
+        ((d.debtor === p && d.creditor === q) || (d.debtor === q && d.creditor === p)));
+
+      let status, color;
+      if (netUnpaid > 0.005)      { status = `${isMe ? 'You owe' : 'Owes'} $${netUnpaid.toFixed(2)}`; color = 'var(--sunset)'; }
+      else if (netUnpaid < -0.005){ status = `${isMe ? 'Owed to you' : 'Owed'} $${(-netUnpaid).toFixed(2)}`; color = 'var(--teal)'; }
+      else                        { status = 'Even \u2014 nets out'; color = 'var(--text-light)'; }
+
+      let settledNote = '';
+      if (settledEntries.length) {
+        const planKey = 'r' + (rc++);
+        reopenPlans[planKey] = settledEntries.map(e => ({ id: e.id, debtor: e.debtor }));
+        const lines = settledEntries.sort((x, y) => x.receipt.localeCompare(y.receipt)).map(e => {
+          const who = e.debtor === p
+            ? `${isMe ? 'you' : esc(p)} paid ${esc(e.creditor)}`
+            : `${esc(e.debtor)} paid ${isMe ? 'you' : esc(p)}`;
+          return `<div class="owe-row" style="padding:4px 0 4px 10px;">
+            <span class="owe-name" style="font-size:0.76rem;color:var(--text-light);">${esc(e.receipt)} \u00b7 ${who} $${e.amount.toFixed(2)}</span>
+            <button class="paid-toggle paid" onclick="reopenReceipt('${e.id}','${esc(e.debtor)}')">Reopen</button>
+          </div>`;
+        }).join('');
+        settledNote = `<div style="margin:2px 0 6px;">
+          <div style="font-size:0.72rem;font-weight:700;color:var(--teal);margin:2px 0;">Settled payments:</div>
+          ${lines}
+          <button class="paid-toggle unpaid" style="margin-top:4px;font-size:0.72rem;" onclick="reopenPairAll('${planKey}')">Reopen all with ${esc(q)}</button>
+        </div>`;
+      }
+
+      return `<div style="border-top:1px solid var(--sand);padding:8px 0;">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.9rem;">
+          <span style="font-weight:600;">${esc(q)}</span>
+          <span style="font-weight:700;color:${color};">${status}</span>
+        </div>
+        ${settledNote}
       </div>`;
     }).join('');
-    settledHtml = `<details style="margin-top:20px;"><summary style="cursor:pointer;font-weight:700;color:var(--mahogany);padding:8px 0;">Settled balances (tap to view / undo)</summary><div style="margin-top:10px;">${blocks}</div></details>`;
-  }
+
+    let chip, chipColor;
+    if (netTotal > 0.005)       { chip = `Owes $${netTotal.toFixed(2)} net`; chipColor = 'var(--sunset)'; }
+    else if (netTotal < -0.005) { chip = `Owed $${(-netTotal).toFixed(2)} net`; chipColor = 'var(--teal)'; }
+    else                        { chip = 'All square'; chipColor = 'var(--teal)'; }
+
+    return `<details style="margin-bottom:10px;border:2px solid ${isMe ? 'var(--gold)' : 'var(--sand-dark)'};border-radius:var(--radius-md);background:${isMe ? 'var(--sand-light)' : 'white'};">
+      <summary style="cursor:pointer;list-style:none;padding:12px 14px;font-weight:800;color:var(--mahogany);display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <span>${isMe ? 'You' : esc(p)}</span>
+        <span style="font-size:0.78rem;font-weight:700;color:${chipColor};background:white;padding:3px 10px;border-radius:999px;border:1px solid ${chipColor};white-space:nowrap;">${chip}</span>
+      </summary>
+      <div style="padding:0 14px 12px;">${rows || '<p style="font-size:0.8rem;color:var(--text-light);">No shared costs.</p>'}</div>
+    </details>`;
+  }).join('');
+
+  const settledHtml = people.length
+    ? `<div style="margin-top:24px;"><h3 style="font-size:1rem;color:var(--mahogany);margin-bottom:4px;">By person</h3><p class="split-sub" style="margin-bottom:10px;">Tap a name to expand — shows how their balance nets out with each person, plus settled payments (with undo).</p>${personBlocks}</div>`
+    : '';
 
   container.innerHTML = outstandingHtml + settledHtml;
 }
@@ -3060,66 +3100,6 @@ async function reopenPairAll(planKey) {
     toast('Failed: ' + err.message, true);
   }
 }
-
-// ===== SUMMARY (full itemized per-person ledger for validation) =====
-function renderSummary() {
-  const container = document.getElementById('summaryContent');
-  const debts = [];
-  (receipts || []).forEach(r => {
-    const data = r.data || {};
-    const payer = data.payer || 'Unknown';
-    const payments = data.payments || {};
-    const { owes } = computeReceiptOwes(data);
-    Object.entries(owes).forEach(([name, amount]) => {
-      if (name === payer) return;
-      if (amount <= 0) return;
-      debts.push({ debtor: name, creditor: payer, amount, receipt: r.name, paid: payments[name] === true });
-    });
-  });
-
-  if (debts.length === 0) {
-    container.innerHTML = '<div class="empty-state"><div class="emoji">\ud83e\uddfe</div><p>No shared costs yet.</p></div>';
-    return;
-  }
-
-  const people = [...new Set([...debts.map(d => d.debtor), ...debts.map(d => d.creditor)])];
-  people.sort((a, b) => a.localeCompare(b));
-  people.sort((a, b) => (a === currentUser ? -1 : b === currentUser ? 1 : 0));
-
-  const tag = paid => paid
-    ? '<span style="font-size:0.68rem;font-weight:700;color:var(--teal);background:#e5f2f0;padding:2px 8px;border-radius:999px;white-space:nowrap;">PAID</span>'
-    : '<span style="font-size:0.68rem;font-weight:700;color:var(--sunset);background:#fbeee4;padding:2px 8px;border-radius:999px;white-space:nowrap;">OWED</span>';
-
-  container.innerHTML = people.map(p => {
-    const isMe = p === currentUser;
-    const owesList = debts.filter(d => d.debtor === p).sort((a, b) => a.creditor.localeCompare(b.creditor));
-    const owedList = debts.filter(d => d.creditor === p).sort((a, b) => a.debtor.localeCompare(b.debtor));
-    const owesOut = owesList.filter(d => !d.paid).reduce((s, d) => s + d.amount, 0);
-    const owedOut = owedList.filter(d => !d.paid).reduce((s, d) => s + d.amount, 0);
-
-    const row = (who, d) => `<div class="owe-row">
-        <span class="owe-name" style="font-size:0.85rem;">${who} <span style="color:var(--text-light);">\u00b7 ${esc(d.receipt)}</span></span>
-        <span class="owe-amount">$${d.amount.toFixed(2)}</span>
-        ${tag(d.paid)}
-      </div>`;
-
-    const owesRows = owesList.length
-      ? owesList.map(d => row('to ' + esc(d.creditor), d)).join('')
-      : '<p style="font-size:0.8rem;color:var(--text-light);padding:4px 0;">Owes nothing.</p>';
-    const owedRows = owedList.length
-      ? owedList.map(d => row(esc(d.debtor), d)).join('')
-      : '<p style="font-size:0.8rem;color:var(--text-light);padding:4px 0;">Nobody owes them.</p>';
-
-    return `<div class="settle-block" style="margin-bottom:16px;padding:14px;border:2px solid ${isMe ? 'var(--gold)' : 'var(--sand-dark)'};border-radius:var(--radius-md);background:${isMe ? 'var(--sand-light)' : 'white'};">
-      <div style="font-weight:800;color:var(--mahogany);font-size:1.05rem;margin-bottom:10px;">${isMe ? 'You' : esc(p)}</div>
-      <div style="font-weight:700;color:var(--text-medium);font-size:0.8rem;margin:6px 0 4px;">${isMe ? 'You owe' : 'Owes'} <span style="float:right;color:var(--sunset);">$${owesOut.toFixed(2)} outstanding</span></div>
-      ${owesRows}
-      <div style="font-weight:700;color:var(--text-medium);font-size:0.8rem;margin:12px 0 4px;">${isMe ? "You're owed" : 'Owed to them'} <span style="float:right;color:var(--teal);">$${owedOut.toFixed(2)} outstanding</span></div>
-      ${owedRows}
-    </div>`;
-  }).join('');
-}
-
 function renderReceiptDetail(receipt) {
   const container = document.getElementById('receiptDetail');
   const data = receipt.data || {};
